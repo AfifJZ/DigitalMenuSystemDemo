@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="branchBar">
+    <div class="bg-white border-bottom shadow-sm" th:if="${currentBranch != null}">
+        <div class="container-fluid py-2">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                        <i class="bi bi-building me-1"></i>
+                        <span th:text="${managerSession.organizationName}">Org</span>
+                    </span>
+                    <span class="text-muted">|</span>
+                    <span class="fw-bold"><i class="bi bi-geo-alt me-1 text-danger"></i><span th:text="${currentBranch.name}">Branch</span></span>
+                    <span class="text-muted small" th:text="${currentBranch.location}">Location</span>
+                    <span class="badge bg-secondary-subtle text-secondary" th:text="${currentBranch.tableCount} + ' tables'">10 tables</span>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2" th:if="${organizationLevel}">
+                    <form th:if="${allBranches != null and (!allBranches.isEmpty() or canAddBranch)}"
+                          id="branchSwitchForm" action="/manage/branch/switch" method="post"
+                          class="d-flex align-items-center gap-2">
+                        <label class="small fw-bold text-secondary mb-0">Branch</label>
+                        <select name="branchId" class="form-select form-select-sm" style="min-width: 180px;"
+                                onchange="handleBranchSelect(this)">
+                            <option th:each="b : ${allBranches}" th:value="${b.id}" th:text="${b.name}"
+                                    th:selected="${b.id == currentBranch.id}"></option>
+                            <option value="__manage__">Manage all branches…</option>
+                            <option th:if="${canAddBranch}" value="__add__">+ Add branch</option>
+                        </select>
+                    </form>
+                    <a th:if="${currentBranch != null}" th:href="@{/manage/branch/{id}(id=${currentBranch.id})}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-sliders me-1"></i>Branch details
+                    </a>
+                </div>
+                <script th:if="${organizationLevel}">
+                    function handleBranchSelect(sel) {
+                        if (sel.value === '__add__') {
+                            window.location.href = '/manage/setup';
+                            return;
+                        }
+                        if (sel.value === '__manage__') {
+                            window.location.href = '/manage/branches';
+                            return;
+                        }
+                        document.getElementById('branchSwitchForm').submit();
+                    }
+                </script>
+
+                <div th:unless="${organizationLevel}" class="small text-muted fst-italic">
+                    Branch login &mdash; viewing this branch only
+                </div>
+
+                <a href="/manage/logout" class="btn btn-outline-secondary btn-sm ms-md-auto">
+                    <i class="bi bi-box-arrow-right me-1"></i>Logout
+                </a>
+            </div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

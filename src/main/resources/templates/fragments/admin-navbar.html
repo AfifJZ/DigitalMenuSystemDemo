@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="adminNav(active)" class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/staff"><i class="bi bi-gear-fill me-2"></i>Admin Panel</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar"
+                aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="adminNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${active == 'staff'} ? ' active'" href="/staff">Menu</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${active == 'kitchen'} ? ' active'" href="/kitchen">Kitchen</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${active == 'billing'} ? ' active'" href="/billing">Billing</a>
+                </li>
+                <li class="nav-item" th:if="${organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'branches'} ? ' active'" href="/manage/branches">Branches</a>
+                </li>
+                <li class="nav-item" th:if="${organizationLevel == null or !organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'manage'} ? ' active'" href="/manage">Dashboard</a>
+                </li>
+            </ul>
+            <a class="btn btn-outline-light btn-sm fw-bold" href="/customer" target="_blank">
+                <i class="bi bi-box-arrow-up-right me-1"></i> View Live Menu
+            </a>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

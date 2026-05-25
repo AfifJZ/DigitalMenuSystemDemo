@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Menu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .menu-card { transition: transform 0.2s, box-shadow 0.2s; border: none; border-radius: 12px; }
+        .menu-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+        .menu-card img { height: 200px; object-fit: cover; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+        .category-header { font-weight: 700; color: #343a40; margin-bottom: 1.5rem; border-bottom: 3px solid #ffc107; display: inline-block; padding-bottom: 5px; }
+        .overlay-unavailable { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 1; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            
+            <div class="d-flex align-items-center">
+                <button class="btn btn-warning fw-bold position-relative me-3" data-bs-toggle="modal" data-bs-target="#cartModal">
+                    <i class="bi bi-cart3"></i> My Cart
+                    <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+                </button>
+
+                <button class="btn btn-outline-light fw-bold me-3" data-bs-toggle="modal" data-bs-target="#viewOrderModal" onclick="loadLastOrder()">
+                    <i class="bi bi-receipt-cutoff"></i> View Order
+                </button>
+                
+                <div class="text-light fw-bold d-none d-sm-block" style="font-size: 0.9rem;">
+                    <i class="bi bi-clock-history text-info me-1"></i> Queue: 
+                    <span class="badge bg-info text-dark rounded-pill ms-1" id="liveQueueCount">0</span>
+                </div>
+            </div>
+
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-shop me-2 text-warning"></i> Our Menu
+            </span>
+        </div>
+    </nav>
+
+    <div th:if="${tableNumber != null}" class="bg-warning text-dark text-center py-2 shadow-sm">
+        <span class="fw-bold fs-5"><i class="bi bi-grid-3x3-gap me-2"></i>Table <span th:text="${tableNumber}">1</span></span>
+        <span th:if="${branchName != null}" class="ms-2 small opacity-75" th:text="'(' + ${branchName} + ')'"></span>
+    </div>
+
+    <div class="d-block d-sm-none bg-dark text-light text-center py-1 border-top border-secondary fw-bold" style="font-size: 0.85rem;">
+        <i class="bi bi-clock-history text-info me-1"></i> Kitchen Queue: 
+        <span class="badge bg-info text-dark rounded-pill mx-1" id="liveQueueCountMobile">0</span> 
+        orders ahead.
+    </div>
+
+    <div class="container my-5">
+        <div th:each="entry : ${menuByCategory}" class="mb-5">
+            <h3 class="category-header" th:text="${entry.key}">Category</h3>
+            
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mt-1">
+                <div class="col" th:each="item : ${entry.value}">
+                    <div class="card h-100 shadow-sm menu-card position-relative">
+                        
+                        <div th:if="${item.status != 'AVAILABLE'}" class="overlay-unavailable">
+                            <h4 class="text-danger fw-bold bg-white px-3 py-2 border border-danger rounded shadow-sm" style="transform: rotate(-10deg);">
+                                <i class="bi bi-slash-circle me-1"></i> <span th:text="${item.status}">SOLD OUT</span>
+                            </h4>
+                        </div>
+
+                        <img th:src="${item.imageUrl != null and !item.imageUrl.isEmpty()} ? ${item.imageUrl} : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80'" class="card-img-top">
+                        
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title fw-bold text-dark mb-0" th:text="${item.name}">Name</h5>
+                                <span class="badge bg-success fs-6" th:text=" 'RM ' + ${#numbers.formatDecimal(item.price, 1, 2)} ">RM 0.00</span>
+                            </div>
+                            <p class="card-text text-secondary flex-grow-1 small" th:text="${item.description}"></p>
+                            
+                            <button class="btn btn-outline-primary w-100 fw-bold mt-2" 
+                                    th:disabled="${item.status != 'AVAILABLE'}"
+                                    th:onclick="openCustomizeModal([[${item.id}]], [[${item.name}]], [[${item.price}]])">
+                                <i class="bi bi-plus-lg"></i> Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="cartModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-cart-check"></i> Your Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <ul class="list-group list-group-flush" id="cartItemsList">
+                        </ul>
+                </div>
+                <div class="modal-footer d-flex justify-content-between bg-light shadow-sm">
+                    <h5 class="fw-bold mb-0 text-dark">Total: RM <span id="cartTotal">0.00</span></h5>
+                    <button type="button" class="btn btn-success fw-bold px-4" onclick="showPaymentOptions()">
+                        Checkout <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3">
+        <div id="cartToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-bold" id="toastMessage">Item added to cart!</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+    <div class="d-block d-md-none fixed-bottom bg-white shadow-lg p-3 border-top z-3">
+        <button class="btn btn-warning w-100 fw-bold py-2 shadow-sm fs-5" data-bs-toggle="modal" data-bs-target="#cartModal">
+            <i class="bi bi-cart3 me-2"></i> View Cart <span class="badge bg-danger ms-2" id="mobileCartCount">0</span>
+        </button>
+    </div>
+    <div class="modal fade" id="customizeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="customizeItemName">Item Name</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <h4 class="text-success fw-bold mb-4" id="customizeItemPrice">RM 0.00</h4>
+                    
+                    <label class="form-label fw-bold text-secondary">Quantity</label>
+                    <div class="d-flex justify-content-center align-items-center mb-4">
+                        <button class="btn btn-outline-primary fw-bold fs-4 px-3 py-0" onclick="adjustCustomizeQuantity(-1)">-</button>
+                        <span class="mx-4 fw-bold fs-3 text-dark" id="customizeQuantity">1</span>
+                        <button class="btn btn-outline-primary fw-bold fs-4 px-3 py-0" onclick="adjustCustomizeQuantity(1)">+</button>
+                    </div>
+
+                    <label class="form-label fw-bold text-secondary text-start w-100">Special Instructions</label>
+                    <input type="text" class="form-control shadow-sm" id="customizeNote" placeholder="e.g., no onions, less ice, extra spicy...">
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button class="btn btn-primary w-100 fw-bold py-2" onclick="confirmAddToCart()">
+                        Add to Cart <i class="bi bi-cart-plus ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-credit-card-2-front me-2"></i>Select Payment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-secondary text-center mb-4">How would you like to pay for your order?</p>
+                    
+                    <button class="btn btn-outline-primary w-100 fw-bold mb-3 py-3" onclick="processPayment('CARD')">
+                        <i class="bi bi-credit-card me-2"></i> Credit / Debit Card
+                    </button>
+                    
+                    <button class="btn btn-outline-primary w-100 fw-bold mb-3 py-3" onclick="processPayment('ONLINE')">
+                        <i class="bi bi-bank me-2"></i> Online Banking / FPX
+                    </button>
+                    
+                    <button class="btn btn-warning w-100 fw-bold py-3 text-dark shadow-sm" onclick="processPayment('COUNTER')">
+                        <i class="bi bi-person-raised-hand me-2"></i> Pay at Counter (Cash / QR)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Order + Refund Request -->
+    <div class="modal fade" id="viewOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-receipt-cutoff me-2"></i>Your Order</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text fw-bold">Order #</span>
+                        <input type="number" class="form-control" id="viewOrderIdInput" placeholder="Enter order number">
+                        <button class="btn btn-outline-primary fw-bold" type="button" onclick="loadOrderById()">Load</button>
+                    </div>
+
+                    <div id="orderDetails" class="d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="fw-bold text-dark">Status: <span id="orderStatus" class="badge bg-secondary"></span></div>
+                            <div class="text-muted small" id="orderTime"></div>
+                        </div>
+                        <div id="orderActionBanner" class="alert d-none mb-3"></div>
+
+                        <ul class="list-group mb-3" id="orderItemsList"></ul>
+
+                        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-3">
+                            <span class="fw-bold text-secondary">Total</span>
+                            <span class="fw-bold text-success">RM <span id="orderTotal">0.00</span></span>
+                        </div>
+
+                        <label class="form-label fw-bold">Request refund (message to kitchen)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="refundReason" placeholder="Reason (e.g., wrong item, changed mind)">
+                            <button class="btn btn-danger fw-bold" type="button" onclick="requestRefund()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Request
+                            </button>
+                        </div>
+                        <div class="text-muted small mt-2" id="refundHint">Kitchen staff will see your request and decide.</div>
+                    </div>
+
+                    <div id="orderEmptyState" class="text-center text-muted py-4">
+                        <i class="bi bi-search fs-1"></i>
+                        <div class="fw-bold mt-2">Load an order to view details.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Success!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-5 text-center">
+                    <i class="bi bi-receipt-cutoff d-block mb-3" style="font-size: 4rem; color: #198754;"></i>
+                    <h4 class="fw-bold text-dark mb-3">Order Placed!</h4>
+                    <p class="text-secondary fs-5 mb-0">Please proceed to the counter to make your payment.</p>
+                </div>
+                <div class="modal-footer justify-content-center bg-light border-0 py-3">
+                    <button type="button" class="btn btn-success fw-bold px-5 rounded-pill" data-bs-dismiss="modal">Got it!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script th:inline="javascript">
+        const CUSTOMER_BRANCH_ID = /*[[${branchId}]]*/ null;
+        const CUSTOMER_TABLE_NUMBER = /*[[${tableNumber}]]*/ null;
+
+        function orderContextQuery() {
+            const params = new URLSearchParams();
+            if (CUSTOMER_BRANCH_ID != null) params.set('branchId', CUSTOMER_BRANCH_ID);
+            if (CUSTOMER_TABLE_NUMBER != null) params.set('tableNumber', CUSTOMER_TABLE_NUMBER);
+            const qs = params.toString();
+            return qs ? '?' + qs : '';
+        }
+
+        function appendOrderContext(url) {
+            const ctx = orderContextQuery();
+            if (!ctx) return url;
+            return url + (url.includes('?') ? '&' + ctx.substring(1) : ctx);
+        }
+
+        let cart = [];
+
+        function addToCart(id, name, price) {
+            // Check if item already exists in cart
+            let existingItem = cart.find(item => item.id === id);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ id: id, name: name, price: price, quantity: 1, note: "" });
+            }
+            updateCartUI();
+            
+            // Show subtle popup toast instead of annoying browser alert
+            document.getElementById("toastMessage").innerText = name + " added to cart!";
+            const toast = new bootstrap.Toast(document.getElementById('cartToast'));
+            toast.show();
+        }
+
+        function updateCartUI() {
+            let count = 0;
+            let total = 0.0;
+            let listHtml = "";
+
+            cart.forEach((item, index) => {
+                count += item.quantity;
+                total += (item.price * item.quantity);
+                
+                listHtml += `
+                    <li class="list-group-item bg-white p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <h6 class="my-0 fw-bold text-dark">${item.name}</h6>
+                                <small class="text-success fw-bold">RM ${(item.price * item.quantity).toFixed(2)}</small>
+                            </div>
+                            
+                            <div class="d-flex align-items-center bg-light border rounded px-2 py-1">
+                                <button class="btn btn-sm text-primary fw-bold px-2 py-0 border-0" onclick="changeQuantity(${index}, -1)"><i class="bi bi-dash-lg"></i></button>
+                                <span class="mx-2 fw-bold text-dark" style="min-width: 20px; text-align: center;">${item.quantity}</span>
+                                <button class="btn btn-sm text-primary fw-bold px-2 py-0 border-0" onclick="changeQuantity(${index}, 1)"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group input-group-sm mt-2">
+                            <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-chat-text"></i></span>
+                            <input type="text" class="form-control border-start-0 bg-light" 
+                                   placeholder="Add note (e.g., no onions, less ice)..." 
+                                   value="${item.note}" 
+                                   onkeyup="updateNote(${index}, this.value)">
+                            <button class="btn btn-outline-danger border-start-0" onclick="removeFromCart(${index})" title="Remove Item"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </li>
+                `;
+            });
+
+            if (cart.length === 0) {
+                listHtml = `
+                    <li class="list-group-item text-center text-muted py-5">
+                        <i class="bi bi-cart-x fs-1 d-block mb-3 text-secondary"></i>
+                        Your cart is empty.<br><small>Looks like you haven't made a choice yet!</small>
+                    </li>`;
+            }
+
+            document.getElementById("cartCount").innerText = count;
+            document.getElementById("mobileCartCount").innerText = count;
+            document.getElementById("cartItemsList").innerHTML = listHtml;
+            document.getElementById("cartTotal").innerText = total.toFixed(2);
+        }
+
+        function changeQuantity(index, delta) {
+            cart[index].quantity += delta;
+            // If quantity goes to 0, remove it from the cart
+            if (cart[index].quantity <= 0) {
+                removeFromCart(index);
+            } else {
+                updateCartUI();
+            }
+        }
+
+        function updateNote(index, text) {
+            // Save the customer's text as they type it
+            cart[index].note = text;
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        function submitOrder() {
+            // Legacy handler kept for safety: default to "Pay at Counter" flow.
+            processPayment('COUNTER');
+        }
+        
+        // Initialize an empty cart state when page loads
+        updateCartUI();
+
+        let currentItem = {};
+
+        // Opens the Customization Modal
+        function openCustomizeModal(id, name, price) {
+            currentItem = { id: id, name: name, price: price, quantity: 1, note: "" };
+            document.getElementById("customizeItemName").innerText = name;
+            document.getElementById("customizeItemPrice").innerText = "RM " + price.toFixed(2);
+            document.getElementById("customizeQuantity").innerText = "1";
+            document.getElementById("customizeNote").value = "";
+            new bootstrap.Modal(document.getElementById('customizeModal')).show();
+        }
+
+        // Adjusts quantity inside the Modal
+        function adjustCustomizeQuantity(delta) {
+            if (currentItem.quantity + delta > 0) {
+                currentItem.quantity += delta;
+                document.getElementById("customizeQuantity").innerText = currentItem.quantity;
+            }
+        }
+
+        // Commits the item to the cart
+        function confirmAddToCart() {
+            currentItem.note = document.getElementById("customizeNote").value;
+            
+            // Check if exact item with same note exists to merge them
+            let existingItem = cart.find(item => item.id === currentItem.id && item.note === currentItem.note);
+            if (existingItem) {
+                existingItem.quantity += currentItem.quantity;
+            } else {
+                cart.push({ ...currentItem });
+            }
+            
+            updateCartUI();
+            bootstrap.Modal.getInstance(document.getElementById('customizeModal')).hide();
+            
+            document.getElementById("toastMessage").innerText = currentItem.name + " added to cart!";
+            new bootstrap.Toast(document.getElementById('cartToast')).show();
+        }
+
+        // Opens Payment Selection
+        function showPaymentOptions() {
+            if (cart.length === 0) return;
+            bootstrap.Modal.getInstance(document.getElementById('cartModal')).hide();
+            new bootstrap.Modal(document.getElementById('paymentModal')).show();
+        }
+
+        function processPayment(method) {
+            if (cart.length === 0) return;
+
+            // COUNTER = create order -> Billing tab -> staff confirms paid -> send to kitchen
+            if (method === 'COUNTER') {
+                fetch(appendOrderContext('/api/order?paymentMethod=' + encodeURIComponent(method)), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cart)
+                })
+                .then(response => response.ok ? response.json() : Promise.reject())
+                .then((data) => {
+                    if (data && data.orderId) localStorage.setItem('lastOrderId', String(data.orderId));
+                    cart = [];
+                    updateCartUI();
+                    bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                })
+                .catch(() => {
+                    document.getElementById("toastMessage").innerText = "Error sending order. Please try again.";
+                    document.getElementById("cartToast").classList.replace("text-bg-success", "text-bg-danger");
+                    new bootstrap.Toast(document.getElementById('cartToast')).show();
+                });
+                return;
+            }
+
+            // CARD/ONLINE = create Stripe Checkout Session, then redirect to Stripe hosted payment page.
+            fetch(appendOrderContext('/api/payments/stripe/checkout-session?paymentMethod=' + encodeURIComponent(method)), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cart)
+            })
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw data;
+                return data;
+            })
+            .then(data => {
+                if (!data.checkoutUrl) throw new Error('Missing checkoutUrl');
+                if (data && data.orderId) localStorage.setItem('lastOrderId', String(data.orderId));
+                window.location.href = data.checkoutUrl;
+            })
+            .catch((err) => {
+                const msg = (err && err.error) ? err.error : "Payment setup failed. Please try again or select Pay at Counter.";
+                document.getElementById("toastMessage").innerText = msg;
+                document.getElementById("cartToast").classList.replace("text-bg-success", "text-bg-warning");
+                new bootstrap.Toast(document.getElementById('cartToast')).show();
+            });
+        }
+
+        function setOrderModalState(hasOrder) {
+            document.getElementById('orderDetails').classList.toggle('d-none', !hasOrder);
+            document.getElementById('orderEmptyState').classList.toggle('d-none', hasOrder);
+        }
+
+        function loadLastOrder() {
+            const fromUrl = new URLSearchParams(window.location.search).get('orderId');
+            const last = fromUrl || localStorage.getItem('lastOrderId') || '';
+            document.getElementById('viewOrderIdInput').value = last;
+            if (last) loadOrder(last);
+            else setOrderModalState(false);
+        }
+
+        function loadOrderById() {
+            const id = document.getElementById('viewOrderIdInput').value;
+            if (!id) return;
+            loadOrder(id);
+        }
+
+        function loadOrder(orderId) {
+            fetch('/api/order/' + encodeURIComponent(orderId))
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(data => {
+                    if (!data.ok) throw new Error(data.error || 'Order not found');
+                    localStorage.setItem('lastOrderId', String(data.id));
+
+                    setOrderModalState(true);
+
+                    document.getElementById('orderStatus').innerText = data.status || '';
+                    document.getElementById('orderStatus').className = 'badge ' + (
+                        data.status === 'KITCHEN' ? 'bg-warning text-dark' :
+                        data.status === 'COMPLETED' ? 'bg-success' :
+                        data.status === 'REFUND_REQUESTED' ? 'bg-danger' :
+                        'bg-secondary'
+                    );
+                    document.getElementById('orderTime').innerText = data.orderTime ? data.orderTime.replace('T', ' ') : '';
+                    const totalAmount = Number(data.totalAmount ?? 0);
+                    document.getElementById('orderTotal').innerText = isFinite(totalAmount) ? totalAmount.toFixed(2) : '0.00';
+
+                    const banner = document.getElementById('orderActionBanner');
+                    banner.classList.add('d-none');
+                    banner.className = 'alert d-none mb-3';
+                    if (data.status === 'UPFRONT_PAYMENT') {
+                        banner.className = 'alert alert-warning mb-3';
+                        banner.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i><span class="fw-bold">Please pay at the counter.</span> If payment is not made within 10 minutes, the order will be cancelled.';
+                    } else if (data.status === 'CANCELLED') {
+                        banner.className = 'alert alert-danger mb-3';
+                        banner.innerHTML = '<i class="bi bi-x-octagon me-2"></i><span class="fw-bold">Order cancelled.</span> If you still want it, please place a new order.';
+                    } else if (data.status === 'KITCHEN') {
+                        banner.className = 'alert alert-info mb-3';
+                        banner.innerHTML = '<i class="bi bi-fire me-2"></i><span class="fw-bold">Your order is in the kitchen queue.</span>';
+                    } else if (data.status === 'REFUND_REQUESTED') {
+                        banner.className = 'alert alert-warning mb-3';
+                        banner.innerHTML = '<i class="bi bi-arrow-counterclockwise me-2"></i><span class="fw-bold">Refund requested.</span> Please wait for staff response.';
+                    } else if (data.status === 'REFUNDED') {
+                        banner.className = 'alert alert-success mb-3';
+                        banner.innerHTML = '<i class="bi bi-check-circle me-2"></i><span class="fw-bold">Refunded.</span>';
+                    }
+
+                    const items = Array.isArray(data.items) ? data.items : [];
+                    document.getElementById('orderItemsList').innerHTML = items.map(it => `
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-bold text-dark">${it.name ?? ''}</div>
+                                ${it.note ? `<div class="text-danger small mt-1"><i class="bi bi-chat-left-text"></i> Note: ${it.note}</div>` : ''}
+                            </div>
+                            <span class="badge bg-primary rounded-pill">${'x' + (it.quantity ?? 0)}</span>
+                        </li>
+                    `).join('');
+                })
+                .catch(() => {
+                    setOrderModalState(false);
+                    document.getElementById("toastMessage").innerText = "Order not found. Please check your order number.";
+                    document.getElementById("cartToast").classList.replace("text-bg-success", "text-bg-warning");
+                    new bootstrap.Toast(document.getElementById('cartToast')).show();
+                });
+        }
+
+        function requestRefund() {
+            const orderId = document.getElementById('viewOrderIdInput').value;
+            if (!orderId) return;
+            const reason = document.getElementById('refundReason').value || '';
+
+            fetch('/api/order/' + encodeURIComponent(orderId) + '/refund-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => {
+                if (!data.ok) throw new Error(data.error || 'Failed');
+                document.getElementById("toastMessage").innerText = "Refund request sent to kitchen.";
+                document.getElementById("cartToast").classList.replace("text-bg-warning", "text-bg-success");
+                new bootstrap.Toast(document.getElementById('cartToast')).show();
+                loadOrder(orderId);
+            })
+            .catch(() => {
+                document.getElementById("toastMessage").innerText = "Failed to send refund request. Try again.";
+                document.getElementById("cartToast").classList.replace("text-bg-success", "text-bg-danger");
+                new bootstrap.Toast(document.getElementById('cartToast')).show();
+            });
+        }
+        // --- LIVE QUEUE UPDATER ---
+        // --- LIVE QUEUE UPDATER ---
+        function updateQueueCount() {
+            fetch('/api/queue-count')
+            .then(response => response.text())
+            .then(count => {
+                // Update desktop badge
+                let desktopBadge = document.getElementById('liveQueueCount');
+                if(desktopBadge) desktopBadge.innerText = count;
+                
+                // Update mobile badge
+                let mobileBadge = document.getElementById('liveQueueCountMobile');
+                if(mobileBadge) mobileBadge.innerText = count;
+            })
+            .catch(error => console.log("Queue count update failed", error));
+        }
+
+        // Fetch the queue count immediately when the page loads
+        updateQueueCount();
+
+        // Check the kitchen queue every 15 seconds in the background
+        setInterval(updateQueueCount, 15000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+    <div th:replace="~{fragments/admin-navbar :: adminNav('manage')}"></div>
+
+    <div th:replace="~{fragments/admin-branch-bar :: branchBar}"></div>
+
+    <div class="container my-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <h3 class="fw-bold mb-0"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Revenue Dashboard</h3>
+
+            <form method="get" action="/manage" class="d-flex align-items-center gap-2">
+                <span class="text-secondary fw-bold small">View</span>
+                <select class="form-select form-select-sm" name="period" onchange="this.form.submit()">
+                    <option value="daily" th:selected="${period == 'daily'}">Daily (Today)</option>
+                    <option value="weekly" th:selected="${period == 'weekly'}">Weekly (This week)</option>
+                    <option value="monthly" th:selected="${period == 'monthly'}">Monthly (This month)</option>
+                </select>
+            </form>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-cash-coin text-success me-2"></i>Revenue</h5>
+                        <canvas id="revenueChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-award-fill text-warning me-2"></i>Best-selling Categories</h5>
+                        <canvas id="bestCategoryChart" height="160"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-clock-fill text-primary me-2"></i>Peak Hour (Orders)</h5>
+                        <canvas id="peakHourChart" height="160"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        // Retrieve arrays populated by the Spring Controller
+        const revenueLabels = /*[[${chartLabels}]]*/ [];
+        const revenueData = /*[[${chartData}]]*/ [];
+
+        const bestCategoryLabels = /*[[${bestCategoryLabels}]]*/ [];
+        const bestCategoryData = /*[[${bestCategoryData}]]*/ [];
+
+        const peakHourLabels = /*[[${peakHourLabels}]]*/ [];
+        const peakHourData = /*[[${peakHourData}]]*/ [];
+
+        // Check if there is data to display
+        if (revenueLabels.length === 0) {
+            document.getElementById('revenueChart').outerHTML = 
+                '<div class="text-center text-muted py-5"><i class="bi bi-graph-down fs-1"></i><p class="mt-3">No revenue data available yet.</p></div>';
+        } else {
+            // Render the Bar Chart
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: revenueLabels,
+                    datasets: [{
+                        label: 'Daily Revenue (RM)', 
+                        data: revenueData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    // This one already had 2 decimals!
+                                    return 'RM ' + context.parsed.y.toFixed(2); 
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                // ADDED .toFixed(2) HERE SO IT ALWAYS SHOWS .00
+                                callback: function(value) { return 'RM ' + value.toFixed(2); } 
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        if (bestCategoryLabels.length === 0) {
+            document.getElementById('bestCategoryChart').outerHTML =
+                '<div class="text-center text-muted py-5"><i class="bi bi-bag-x fs-1"></i><p class="mt-3">No sales data yet.</p></div>';
+        } else {
+            const ctx2 = document.getElementById('bestCategoryChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: bestCategoryLabels,
+                    datasets: [{
+                        label: 'Items sold',
+                        data: bestCategoryData,
+                        backgroundColor: 'rgba(255, 193, 7, 0.55)',
+                        borderColor: 'rgba(255, 193, 7, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        if (peakHourLabels.length === 0) {
+            document.getElementById('peakHourChart').outerHTML =
+                '<div class="text-center text-muted py-5"><i class="bi bi-clock-history fs-1"></i><p class="mt-3">No orders yet.</p></div>';
+        } else {
+            const ctx3 = document.getElementById('peakHourChart').getContext('2d');
+            new Chart(ctx3, {
+                type: 'line',
+                data: {
+                    labels: peakHourLabels,
+                    datasets: [{
+                        label: 'Orders',
+                        data: peakHourData,
+                        borderColor: 'rgba(13, 110, 253, 1)',
+                        backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                        fill: true,
+                        tension: 0.25,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
