@@ -26,8 +26,8 @@
                          th:classappend="${order.status == 'CANCELLED'} ? 'bg-danger text-white' : (${order.status == 'REFUND_REQUESTED'} ? 'bg-warning text-dark' : 'bg-dark text-white')">
                         <div>
                             <span class="fw-bold">Order #<span th:text="${order.id}">1</span></span>
-                            <span th:if="${order.tableNumber != null}" class="badge bg-warning text-dark ms-2">
-                                <i class="bi bi-grid-3x3-gap me-1"></i>Table <span th:text="${order.tableNumber}">1</span>
+                            <span class="badge bg-warning text-dark ms-2">
+                                <i class="bi bi-grid-3x3-gap me-1"></i>Table <span th:text="${order.tableNumber != null ? order.tableNumber : 0}">0</span>
                             </span>
                         </div>
                         <span class="badge bg-light text-dark" th:text="${#temporals.format(order.orderTime, 'HH:mm')}">12:00</span>

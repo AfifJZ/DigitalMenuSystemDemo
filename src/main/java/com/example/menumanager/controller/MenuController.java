@@ -113,9 +113,13 @@ public class MenuController {
         final Long branchIdFilter = filterBranchId;
         
         // Filter for active kitchen and recently cancelled orders
+        // Include all KITCHEN/CANCELLED/REFUND_REQUESTED orders that either:
+        // 1. Have no branch restriction (for global staff), OR
+        // 2. Match the staff's assigned branch, OR
+        // 3. Have no branchId assigned (default/counter orders visible to all branches)
         List<Order> kitchenView = allOrders.stream()
                 .filter(o -> "KITCHEN".equals(o.getStatus()) || "CANCELLED".equals(o.getStatus()) || "REFUND_REQUESTED".equals(o.getStatus()))
-                .filter(o -> branchIdFilter == null || branchIdFilter.equals(o.getBranchId()))
+                .filter(o -> branchIdFilter == null || o.getBranchId() == null || branchIdFilter.equals(o.getBranchId()))
                 .toList();
 
         model.addAttribute("orders", kitchenView);
