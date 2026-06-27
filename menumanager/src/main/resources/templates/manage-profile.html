@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="bg-light">
+
+    <div th:replace="~{fragments/admin-navbar :: adminNav('profile')}"></div>
+    <div th:replace="~{fragments/admin-branch-bar :: branchBar}"></div>
+
+    <div class="container my-5">
+        <div class="mb-4">
+            <h3 class="fw-bold"><i class="bi bi-person-circle text-primary me-2"></i>Organization Profile</h3>
+            <p class="text-muted">Manage your organization settings and contact information.</p>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white fw-bold border-bottom">
+                        <i class="bi bi-info-circle text-primary me-2"></i>Organization Information
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/manage/profile/update-email}" method="post">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Organization Name</label>
+                                <input type="text" class="form-control" th:value="${organization.name}" disabled>
+                                <div class="form-text">Organization name cannot be changed.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Registered Email</label>
+                                <input type="email" class="form-control" name="newEmail" th:value="${organization.email}" required>
+                                <div class="form-text">This email is used for password recovery and important notifications.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary fw-bold">
+                                <i class="bi bi-check-lg me-1"></i>Update Email
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white fw-bold border-bottom">
+                        <i class="bi bi-bank2 text-success me-2"></i>Account to Receive Payment
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">
+                            Saving here <strong>automatically registers</strong> your bank with Stripe for card/FPX payouts
+                            and shows these details to customers who choose <strong>Pay at Counter</strong>.
+                        </p>
+                        <form th:action="@{/manage/profile/update-payout-bank}" method="post" id="payoutBankForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Bank name</label>
+                                <select class="form-select" name="bankName" id="payoutBankName" required>
+                                    <option value="" disabled
+                                            th:selected="${organization.payoutBankName == null or organization.payoutBankName.isEmpty()}">
+                                        Choose a bank&hellip;
+                                    </option>
+                                    <option th:each="b : ${bankCatalog}"
+                                            th:value="${b.code}"
+                                            th:text="${b.code}"
+                                            th:data-min="${b.minLength}"
+                                            th:data-max="${b.maxLength}"
+                                            th:data-hint="${b.hint}"
+                                            th:selected="${organization.payoutBankName == b.code}">
+                                        Bank
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">
+                                    Account number
+                                    <span class="text-muted fw-normal" id="accountLengthHint"></span>
+                                </label>
+                                <input type="text" class="form-control font-monospace" name="accountNumber"
+                                       id="payoutAccountNumber"
+                                       th:value="${organization.payoutAccountNumber}"
+                                       th:pattern="${currentBank != null} ? ${currentBank.regex()} : '\\d{8,20}'"
+                                       inputmode="numeric" required
+                                       th:placeholder="${currentBank != null} ? ${currentBank.hint} : 'Digits only, 8-20 characters'">
+                                <div class="form-text" id="accountNumberHint"
+                                     th:text="${currentBank != null} ? ${currentBank.hint} : 'Choose a bank to see the expected length.'">
+                                    Choose a bank to see the expected length.
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success fw-bold">
+                                <i class="bi bi-check-lg me-1"></i>Save payment account
+                            </button>
+                        </form>
+
+                        <div class="mt-3 p-3 bg-light rounded border" th:if="${organization.stripeAccountId == null}">
+                            <h6 class="fw-bold mb-2"><i class="bi bi-stripe text-primary me-1"></i>Finish Stripe onboarding</h6>
+                            <p class="small text-muted mb-2">
+                                For card & FPX payouts, Stripe needs to collect your bank and KYC details on its own hosted page.
+                                Click the button below to continue.
+                            </p>
+                            <a th:href="@{/manage/profile/connect-stripe}" class="btn btn-primary fw-bold">
+                                <i class="bi bi-stripe me-1"></i>Connect with Stripe
+                            </a>
+                        </div>
+                        <div class="mt-3 p-3 bg-success-subtle border border-success-subtle rounded" th:if="${organization.stripeAccountId != null}">
+                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                            <strong>Stripe account linked</strong>
+                            <span class="font-monospace small" th:text="${organization.stripeAccountId}">acct_...</span>
+                            &mdash; <a th:href="@{/manage/profile/connect-stripe}" class="small">manage on Stripe</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white fw-bold border-bottom">
+                        <i class="bi bi-shield-lock text-warning me-2"></i>Change Organization Password
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/manage/profile/change-password}" method="post" id="passwordForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Current Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" name="currentPassword" id="currentPassword" required>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.togglePasswordField('currentPassword', this)" title="Show password">
+                                        <i class="bi bi-eye-slash-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">New Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" name="newPassword" id="newPassword" required minlength="6">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.togglePasswordField('newPassword', this)" title="Show password">
+                                        <i class="bi bi-eye-slash-fill"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">At least 6 characters.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Confirm New Password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" name="confirmPassword" id="confirmPassword" required minlength="6">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="window.togglePasswordField('confirmPassword', this)" title="Show password">
+                                        <i class="bi bi-eye-slash-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-warning fw-bold">
+                                <i class="bi bi-key me-1"></i>Change Password
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm border-0 bg-primary-subtle">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-lightbulb text-primary me-2"></i>Account Info</h5>
+                        <p class="small text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            As the organization owner, you have access to view all branches' sales data and manage your account settings.
+                        </p>
+                        <hr>
+                        <h6 class="fw-bold small">Automatic linking</h6>
+                        <ul class="small text-muted ps-3 mb-0">
+                            <li class="mb-2"><strong>Pay at Counter</strong> &rarr; customers see this bank & account on the menu.</li>
+                            <li class="mb-2"><strong>Card / FPX</strong> &rarr; Stripe Connect account created automatically; payouts go to this bank.</li>
+                            <li>Stripe minimum <strong>RM 2.00</strong> for card & FPX.</li>
+                        </ul>
+                        <div th:if="${organization.stripeAccountId != null}" class="small text-success mt-3 mb-0">
+                            <i class="bi bi-check-circle me-1"></i>Stripe linked
+                            <span class="font-monospace" th:text="${organization.stripeAccountId}">acct_...</span>
+                        </div>
+                        <hr>
+                        <div class="small">
+                            <strong>Branches:</strong>
+                            <span th:text="${branchCount} + ' branch(es)'">0 branches</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/profile.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Queue - Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="bg-light">
+
+    <div th:replace="~{fragments/admin-navbar :: adminNav('kitchen')}"></div>
+
+    <div th:replace="~{fragments/admin-branch-bar :: branchBar}"></div>
+
+    <div class="container-fluid my-4 px-4">
+        <h3 class="fw-bold mb-4"><i class="bi bi-fire text-danger me-2"></i>Active Kitchen Orders</h3>
+        
+        <div class="row row-cols-1 row-cols-md-3 row-cols-xl-4 g-4">
+            
+            <div class="col" th:each="order : ${orders}">
+                
+                <div class="card h-100 shadow-sm" th:classappend="${order.status == 'CANCELLED'} ? 'border-danger' : 'border-0'">
+                    
+                    <div class="card-header d-flex justify-content-between align-items-center" 
+                         th:classappend="${order.status == 'CANCELLED'} ? 'bg-danger text-white' : (${order.status == 'REFUND_REQUESTED'} ? 'bg-warning text-dark' : 'bg-dark text-white')">
+                        <div>
+                            <span class="fw-bold">Order #<span th:text="${order.id}">1</span></span>
+                            <span class="badge bg-warning text-dark ms-2">
+                                <i class="bi bi-grid-3x3-gap me-1"></i>Table <span th:text="${order.tableNumber != null ? order.tableNumber : 0}">0</span>
+                            </span>
+                        </div>
+                        <span class="badge bg-light text-dark" th:text="${#temporals.format(order.orderTime, 'HH:mm')}">12:00</span>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div th:if="${order.status == 'CANCELLED'}" class="alert alert-danger py-1 px-2 text-center small fw-bold mb-3">
+                            <i class="bi bi-exclamation-triangle-fill"></i> ORDER CANCELLED
+                        </div>
+                        <div th:if="${order.status == 'REFUND_REQUESTED'}" class="alert alert-warning py-2 px-3 small fw-bold mb-3">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                                <div>
+                                    Refund requested by customer
+                                    <div class="fw-normal mt-1" th:if="${order.staffNote != null and !order.staffNote.isEmpty()}">
+                                        Reason: <span class="fw-bold" th:text="${order.staffNote}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul class="list-group list-group-flush mb-3">
+                            <li class="list-group-item px-0 d-flex justify-content-between align-items-start" th:each="item : ${orderItemsMap[order.id]}">
+                                <div>
+                                    <span class="fw-bold text-dark" th:text="${item.name}">Item Name</span>
+                                    <div th:if="${item.note != null and !item.note.isEmpty()}" class="text-danger small mt-1">
+                                        <i class="bi bi-chat-left-text"></i> Note: <span th:text="${item.note}"></span>
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary rounded-pill fs-6" th:text="'x' + ${item.quantity}">x1</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-top-0 pt-0">
+                        <div th:if="${order.status == 'KITCHEN'}" class="d-flex gap-2">
+                            <a th:href="@{/kitchen/complete/{id}(id=${order.id})}" class="btn btn-success flex-grow-1 fw-bold">
+                                <i class="bi bi-check-circle"></i> Ready
+                            </a>
+                            <a th:href="@{/kitchen/cancel/{id}(id=${order.id})}" class="btn btn-outline-danger" onclick="return confirm('Cancel this order?');">
+                                <i class="bi bi-x-circle"></i>
+                            </a>
+                        </div>
+                        <div th:if="${order.status == 'REFUND_REQUESTED'}" class="d-flex gap-2">
+                            <a th:href="@{/kitchen/refund/approve/{id}(id=${order.id})}" class="btn btn-danger flex-grow-1 fw-bold"
+                               onclick="return confirm('Approve refund for this order?');">
+                                <i class="bi bi-check2-circle"></i> Approve refund
+                            </a>
+                            <a th:href="@{/kitchen/refund/deny/{id}(id=${order.id})}" class="btn btn-outline-secondary fw-bold"
+                               onclick="return confirm('Deny refund and keep order in kitchen queue?');">
+                                <i class="bi bi-x-circle"></i>
+                            </a>
+                        </div>
+                        <div th:if="${order.status == 'CANCELLED'}">
+                            <a th:href="@{/kitchen/dismiss/{id}(id=${order.id})}" class="btn btn-secondary w-100 fw-bold">
+                                <i class="bi bi-archive"></i> Dismiss
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(orders)}" class="col-12 w-100 text-center py-5">
+                <i class="bi bi-cup-hot text-muted" style="font-size: 4rem;"></i>
+                <h4 class="text-muted mt-3">The kitchen is clear!</h4>
+                <p class="text-secondary">No active orders at the moment.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/kitchen.js"></script>
+</body>
+</html>

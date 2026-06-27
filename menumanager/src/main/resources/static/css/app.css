@@ -1,0 +1,77 @@
+/* ==========================================================================
+   Menu Manager — global stylesheet
+   ========================================================================== */
+
+/* Default: white surface for content pages. Pages can override by
+   adding a class (e.g. body.auth-page, body.customer). */
+body {
+    min-height: 100vh;
+    background-color: #ffffff;
+}
+
+/* Auth pages: keep the original blue/purple gradient.
+   The class is added via the <body class="... auth-page"> when
+   you want the marketing-style gradient background. */
+body.auth-page {
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+}
+
+/* --- Auth pages (login, register, verify, forgot/reset) --- */
+.auth-card {
+    max-width: 480px;
+    border: none;
+    border-radius: 1rem;
+}
+.nav-pills .nav-link { border-radius: 0.5rem; }
+.nav-pills .nav-link.active { background-color: #0d6efd; }
+
+/* --- OTP input on the verify-email page --- */
+.otp-input {
+    font-size: 1.5rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+}
+
+/* --- Customer menu page --- */
+body.customer { background-color: #f8f9fa; }
+.menu-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    border-radius: 12px;
+}
+.menu-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+.menu-card img {
+    height: 200px;
+    object-fit: cover;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+.category-header {
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid #ffc107;
+    display: inline-block;
+    padding-bottom: 5px;
+}
+.overlay-unavailable {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- QR code print page --- */
+@media print {
+    .no-print { display: none !important; }
+    .qr-card { break-inside: avoid; page-break-inside: avoid; }
+}
+.qr-card img { width: 180px; height: 180px; }

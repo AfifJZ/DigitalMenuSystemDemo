@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+    <div th:replace="~{fragments/admin-navbar :: adminNav('manage')}"></div>
+
+    <div th:replace="~{fragments/admin-branch-bar :: branchBar}"></div>
+
+    <div class="container my-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-0"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Organization Overview</h3>
+                <p th:if="${dashboardBranchName != null}" class="text-muted small mb-0 mt-1">
+                    Sales report for <strong th:text="${dashboardBranchName}">Branch</strong> only
+                </p>
+                <p th:if="${organizationLevel}" class="text-muted small mb-0 mt-1">Organization-wide sales across all branches</p>
+                <p class="text-muted small mb-0 mt-1">Powered by the same data as Billing & History (Today's paid orders)</p>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+                <form method="get" action="/manage" class="d-flex align-items-center gap-2">
+                    <span class="text-secondary fw-bold small">View</span>
+                    <select class="form-select form-select-sm" name="period" onchange="this.form.submit()">
+                        <option value="daily" th:selected="${period == 'daily'}">Daily (Today)</option>
+                        <option value="weekly" th:selected="${period == 'weekly'}">Weekly (This week)</option>
+                        <option value="monthly" th:selected="${period == 'monthly'}">Monthly (This month)</option>
+                    </select>
+                </form>
+                <a href="/manage/export" class="btn btn-dark btn-sm fw-bold">
+                    <i class="bi bi-download me-1"></i> Export CSV
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4" th:if="${organization != null and payoutAccountRegistered}">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+                            <div>
+                                <h5 class="fw-bold mb-2"><i class="bi bi-bank2 text-primary me-2"></i>Account to Receive Payment</h5>
+                                <p class="text-muted small mb-0">Used for <strong>Pay at Counter</strong> bank transfers. Card/FPX still go through Stripe.</p>
+                            </div>
+                            <a href="/manage/profile" class="btn btn-outline-primary btn-sm fw-bold" th:if="${organizationLevel}">
+                                <i class="bi bi-pencil me-1"></i>Edit in Profile
+                            </a>
+                        </div>
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <div class="row g-2 small">
+                                <div class="col-sm-4 text-muted fw-bold">Bank</div>
+                                <div class="col-sm-8" th:text="${organization.payoutBankName}">Maybank</div>
+                                <div class="col-sm-4 text-muted fw-bold">Account number</div>
+                                <div class="col-sm-8 font-monospace" th:text="${organization.payoutAccountNumber}">1234567890</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Dashboard Charts -->
+        <div class="row g-4 mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-cash-coin text-success me-2"></i>Revenue</h5>
+                        <canvas id="revenueChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-award-fill text-warning me-2"></i>Best-selling Categories</h5>
+                        <canvas id="bestCategoryChart" height="160"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-clock-fill text-primary me-2"></i>Peak Hour (Orders)</h5>
+                        <canvas id="peakHourChart" height="160"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu Management Section (same as staff page) -->
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white text-dark d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 py-3">
+                        <div>
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>Branch Menu</h5>
+                            <small class="text-muted" th:if="${managerSession != null and managerSession.branchName != null}">
+                                <span th:text="${managerSession.branchName}">Branch</span> —
+                                <span th:text="${menuItemCount}">0</span> item(s), independent per branch
+                            </small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a th:if="${canImportMenu}" th:href="${importMenuUrl}" class="btn btn-outline-primary fw-bold">
+                                <i class="bi bi-download me-1"></i> Import
+                            </a>
+                            <button type="button" class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#addItemModal" onclick="window.resetStaffModal()">
+                                <i class="bi bi-plus-circle me-1"></i> Add Item
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Image</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${menuItems}">
+                                    <td>
+                                        <img th:src="${item.imageUrl != null and !item.imageUrl.isEmpty()} ? ${item.imageUrl} : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&q=80'"
+                                             class="rounded shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Item Image">
+                                    </td>
+                                    <td class="fw-bold" th:text="${item.name}">Burger</td>
+                                    <td><span class="badge bg-secondary" th:text="${item.category}">Mains</span></td>
+                                    <td th:text=" 'RM ' + ${#numbers.formatDecimal(item.price, 1, 2)} ">RM 0.00</td>
+
+                                    <td>
+                                        <span class="badge"
+                                              th:classappend="${item.status == 'AVAILABLE' ? 'bg-success' : (item.status == 'PAUSED' ? 'bg-warning text-dark' : 'bg-danger')}"
+                                              th:text="${item.status}">AVAILABLE</span>
+                                    </td>
+
+                                    <td class="text-end pe-3">
+                                        <div class="dropdown d-inline-block me-1">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
+                                                Status
+                                            </button>
+                                            <ul class="dropdown-menu shadow-sm">
+                                                <li><a class="dropdown-item text-warning fw-bold" th:href="@{/staff/status/{id}?status=PAUSED(id=${item.id})}"><i class="bi bi-pause-circle me-2"></i>Paused</a></li>
+                                                <li><a class="dropdown-item text-danger fw-bold" th:href="@{/staff/status/{id}?status=SOLD_OUT(id=${item.id})}"><i class="bi bi-slash-circle me-2"></i>Sold Out</a></li>
+                                                <li><a class="dropdown-item text-muted fw-bold" th:href="@{/staff/status/{id}?status=UNAVAILABLE(id=${item.id})}"><i class="bi bi-x-circle me-2"></i>Not Available</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-success fw-bold" th:href="@{/staff/status/{id}?status=AVAILABLE(id=${item.id})}"><i class="bi bi-check-circle me-2"></i>Available</a></li>
+                                            </ul>
+                                        </div>
+
+                                        <button class="btn btn-sm btn-outline-primary me-1"
+                                                data-bs-toggle="modal" data-bs-target="#addItemModal"
+                                                th:attr="data-id=${item.id}, data-name=${item.name}, data-category=${item.category}, data-price=${item.price}, data-desc=${item.description}, data-img=${item.imageUrl}"
+                                                onclick="window.populateStaffModal(this)" title="Edit Item">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <a th:href="@{/staff/delete/{id}(id=${item.id})}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete item?');"><i class="bi bi-trash"></i></a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Item Modal (same as staff page) -->
+    <div class="modal fade" id="addItemModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Add New Item</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/staff/save}" th:object="${newItem}" method="post">
+                    <input type="hidden" th:field="*{id}"> 
+                    
+                    <div class="modal-body bg-light">
+                        <div class="mb-3"><label class="form-label text-secondary small fw-bold">Name</label><input type="text" class="form-control" th:field="*{name}" required></div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label class="form-label text-secondary small fw-bold">Category</label><input type="text" class="form-control" th:field="*{category}"></div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-secondary small fw-bold">Price (RM)</label>
+                                <input type="number" step="0.01" class="form-control" th:field="*{price}" required onblur="if(this.value){this.value = parseFloat(this.value).toFixed(2);}">
+                            </div>
+                        </div>
+                        <div class="mb-3"><label class="form-label text-secondary small fw-bold">Description</label><textarea class="form-control" th:field="*{description}" rows="2"></textarea></div>
+                        <div class="mb-3"><label class="form-label text-secondary small fw-bold">Image URL</label><input type="text" class="form-control" th:field="*{imageUrl}"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Item</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--
+        Dashboard payload as ONE pre-serialized JSON string from
+        MenuController.buildDashboardJson(...). We use th:utext
+        (NOT th:text) so Thymeleaf does not HTML-escape the JSON. With
+        th:text, every double-quote would become " and the browser
+        would fail to JSON.parse() the data, leaving the charts empty
+        with no error visible in the page. th:utext writes the raw
+        JSON so JSON.parse() succeeds.
+    -->
+    <script id="dashboard-data" type="application/json" th:utext="${dashboardJson}">{}</script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/manage.js"></script>
+    <script src="/js/staff.js"></script>
+</body>
+</html>

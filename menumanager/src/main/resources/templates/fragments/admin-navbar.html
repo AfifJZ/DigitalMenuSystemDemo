@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="adminNav(active)" class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/staff"><i class="bi bi-gear-fill me-2"></i>Admin Panel</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar"
+                aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="adminNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item" th:if="${!organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'staff'} ? ' active'" href="/staff">Menu</a>
+                </li>
+                <!-- Kitchen link: only for branch managers -->
+                <li class="nav-item" th:if="${!organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'kitchen'} ? ' active'" href="/kitchen">Kitchen</a>
+                </li>
+                <!-- Billing link: only for branch managers -->
+                <li class="nav-item" th:if="${!organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'billing'} ? ' active'" href="/billing">Billing</a>
+                </li>
+                <!-- Branches link: only for organization owners -->
+                <li class="nav-item" th:if="${organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'branches'} ? ' active'" href="/manage/branches">Branches</a>
+                </li>
+                <!-- Dashboard link: shown to both but label differs based on role -->
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${active == 'manage'} ? ' active'" href="/manage"
+                       th:text="${organizationLevel} ? 'Organization Overview' : 'Branch Dashboard'">Dashboard</a>
+                </li>
+                <!-- Profile link: only for organization owners -->
+                <li class="nav-item" th:if="${organizationLevel}">
+                    <a class="nav-link" th:classappend="${active == 'profile'} ? ' active'" href="/manage/profile">
+                        <i class="bi bi-person-circle me-1"></i>Profile
+                    </a>
+                </li>
+            </ul>
+            <a class="btn btn-outline-light btn-sm fw-bold"
+               th:href="${managerSession?.branchId} ? '/customer?branch=' + ${managerSession.branchId} : '/customer'"
+               target="_blank"
+               th:title="${managerSession?.branchId} ? 'View live menu for branch' : 'View live menu'">
+                <i class="bi bi-box-arrow-up-right me-1"></i> View Live Menu
+                <span th:if="${currentBranch}" class="ms-1 small opacity-75" th:text="'(' + ${currentBranch.name} + ')'"></span>
+            </a>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

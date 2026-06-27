@@ -1,0 +1,28 @@
+# Logs
+*.log
+server.log
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Java/Maven build files (from menumanager)
+target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings
+.apt_generated
+.sts4-cache
