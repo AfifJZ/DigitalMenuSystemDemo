@@ -59,7 +59,7 @@ public class MenuController {
     // --- HOME ROUTE ---
     @GetMapping("/")
     public String home() {
-        return "redirect:/customer";
+        return "redirect:/manage/login";
     }
 
     // --- STAFF ROUTES (Managing the Public Menu) ---
