@@ -56,21 +56,20 @@
                     <div class="card-body">
                         <p class="small text-muted">Password used when a branch manager signs in with this branch name. Stored securely; it cannot be displayed after saving.</p>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">Current password</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="maskedBranchPassword" th:value="${plainPassword != null ? plainPassword : '••••••••'}" readonly style="letter-spacing: 0.5em; font-weight: bold;">
-                                <button type="button" class="btn btn-outline-secondary" id="toggleMaskBtn"
-                                        th:if="${plainPassword != null}" title="Show password">
-                                    <i class="bi bi-eye-slash-fill" id="toggleIcon"></i>
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" id="toggleMaskBtnDisabled"
-                                        th:unless="${plainPassword != null}" disabled title="Password cannot be recovered for security reasons">
-                                    <i class="bi bi-lock-fill"></i>
-                                </button>
+                                <label class="form-label fw-bold small">Current password</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="maskedBranchPassword"
+                                           th:value="${plainPassword != null ? plainPassword : ''}"
+                                           placeholder="Password is securely stored"
+                                           readonly style="font-weight: bold;">
+                                    <button type="button" class="btn btn-outline-secondary" id="toggleMaskBtn"
+                                            title="Show password">
+                                        <i class="bi bi-eye-slash-fill" id="toggleIcon"></i>
+                                    </button>
+                                </div>
+                                <div th:if="${plainPassword != null}" class="form-text text-success"><i class="bi bi-check-circle-fill me-1"></i>Password updated successfully. You can reveal it using the eye icon.</div>
+                                <div th:unless="${plainPassword != null}" class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Password is securely hashed and cannot be retrieved. Use the form below to set a new one.</div>
                             </div>
-                            <div th:if="${plainPassword != null}" class="form-text text-success"><i class="bi bi-check-circle-fill me-1"></i>Password updated successfully. You can reveal it using the eye icon.</div>
-                            <div th:unless="${plainPassword != null}" class="form-text text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Passwords cannot be displayed for security. Use the form below to set a new password.</div>
-                        </div>
                         <hr>
                         <h6 class="fw-bold">Change branch password</h6>
                         <form th:action="@{/manage/branch/{id}/password(id=${branch.id})}" method="post" id="branchPasswordForm">

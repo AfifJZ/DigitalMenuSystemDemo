@@ -1,0 +1,37 @@
+# ============================================================
+# Railway configuration for Digital Menu System (Spring Boot)
+# ============================================================
+[build]
+  # Railway auto-detects Maven via Nixpacks, but we use Dockerfile for consistency
+  builder = "DOCKERFILE"
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  # Railway overrides PORT env var automatically — Spring Boot reads it via server.port=${PORT:8080}
+  startCommand = ""
+
+# ============================================================
+# How to set up the MySQL database on Railway
+# 1. In Railway Dashboard → New → Database → Add MySQL
+# 2. Railway auto-injects MYSQL_URL, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE env vars
+# 3. The app reads these via application.properties (production profile) or env var mapping
+# ============================================================
+
+# ============================================================
+# Required environment variables (set in Railway Dashboard)
+# ============================================================
+# STRIPE_SECRET_KEY       — Stripe secret key (test or live)
+# STRIPE_WEBHOOK_SECRET   — Stripe webhook signing secret
+# PUBLIC_BASE_URL         — Your production URL (e.g. https://your-app.railway.app)
+# MAIL_USERNAME           — Gmail address for sending OTP emails
+# MAIL_PASSWORD           — Gmail app password for SMTP
+# STRIPE_CONNECT_ENABLED  — Set to "true" in production to enable Stripe Connect
+
+# Optional env vars with defaults:
+# MAIL_HOST=smtp.gmail.com
+# MAIL_PORT=587
+# MAIL_FROM= (defaults to MAIL_USERNAME)
+# MAIL_CONSOLE_FALLBACK=false  (disable console OTP printing in production)
+# JPA_SHOW_SQL=false
+# JPA_FORMAT_SQL=false
+# STRIPE_MIN_AMOUNT_MYR=2.00
