@@ -1,7 +1,7 @@
 # Stripe Webhook Setup — Digital Menu System
 
 This document explains how Stripe webhooks work in this application and how to
-configure them for **local development** and **production** (Railway).
+configure them for **local development** and **production**.
 
 ---
 
@@ -114,11 +114,11 @@ The app returns `200 OK` with body `"ok"` on success.
 
 ---
 
-## 2. Production Setup (Railway)
+## 2. Production Setup
 
-### 2.1 Deploy to Railway
-Follow the main Railway deployment steps in [README.md](README.md).
-Ensure your app is running at a public URL like https://your-app.railway.app
+### 2.1 Deploy to Production
+Follow the deployment steps in [README.md](README.md).
+Ensure your app is running at a public URL
 
 ### 2.2 Create Webhook Endpoint in Stripe Dashboard
 
@@ -128,7 +128,7 @@ Ensure your app is running at a public URL like https://your-app.railway.app
 
    | Field | Value |
    |---|---|
-   | **Endpoint URL** | `https://your-app.railway.app/api/payments/stripe/webhook` |
+   | **Endpoint URL** | `https://your-app.your production environment.app/api/payments/stripe/webhook` |
    | **Version** | Your API version (default is fine) |
    | **Events to listen** | Select `checkout.session.completed` |
    | **Connect** | Leave unchecked (or enable if using Stripe Connect) |
@@ -141,16 +141,16 @@ Ensure your app is running at a public URL like https://your-app.railway.app
 2. Under **Signing secret**, click **Reveal**
 3. Copy the value (starts with `whsec_`)
 
-### 2.4 Set Environment Variables in Railway
-In **Railway Dashboard** → Your Service → **Variables**, add:
+### 2.4 Set Environment Variables in your production environment
+In **your production environment Dashboard** → Your Service → **Variables**, add:
 
 ```
 STRIPE_WEBHOOK_SECRET=whsec_your_signing_secret_here
 STRIPE_SECRET_KEY=sk_live_or_sk_test_your_key_here
-PUBLIC_BASE_URL=https://your-app.railway.app
+PUBLIC_BASE_URL=https://your-app.your production environment.app
 ```
 
-> **Warning:** Never commit these values to Git. They are set only in Railway.
+> **Warning:** Never commit these values to Git. They are set only in your production environment.
 
 ### 2.5 Verify the Webhook Works
 In Stripe Dashboard → Webhooks → your endpoint → **Send test webhook**
@@ -211,8 +211,8 @@ since Stripe CLI forwards via a tunnel.
 
 ### ? Use Environment Variables
 
-- STRIPE_SECRET_KEY � set only in Railway, never in code
-- STRIPE_WEBHOOK_SECRET � set only in Railway, never in code
+- STRIPE_SECRET_KEY � set only in your production environment, never in code
+- STRIPE_WEBHOOK_SECRET � set only in your production environment, never in code
 - Both are excluded from Git via .gitignore
 
 ### ? What Not to Do
@@ -227,10 +227,10 @@ since Stripe CLI forwards via a tunnel.
 
 | Problem | Likely Cause | Fix |
 |---|---|---|
-| 400 Invalid signature | Wrong or missing STRIPE_WEBHOOK_SECRET | Check the signing secret in Railway matches the one in Stripe Dashboard |
-| 400 Webhook secret not configured | STRIPE_WEBHOOK_SECRET env var is empty | Set it in Railway Dashboard and redeploy |
+| 400 Invalid signature | Wrong or missing STRIPE_WEBHOOK_SECRET | Check the signing secret in your production environment matches the one in Stripe Dashboard |
+| 400 Webhook secret not configured | STRIPE_WEBHOOK_SECRET env var is empty | Set it in your production environment Dashboard and redeploy |
 | Order stays ONLINE_PAYMENT_PENDING after payment | Webhook not reaching your app | Check Stripe Dashboard ? Webhooks ? Latest attempts for error details |
-| 500 Webhook error | Exception in handler code | Check app logs in Railway for the stack trace |
+| 500 Webhook error | Exception in handler code | Check app logs for the stack trace |
 | Success redirect works but webhook doesn't | Stripe Dashboard URL is wrong | Ensure the endpoint URL matches exactly, including the trailing path |
 | FPX payment never completes | FPX requires real-time bank transfer | Test with card first (4242...), then try FPX with a real test bank |
 
@@ -242,8 +242,8 @@ since Stripe CLI forwards via a tunnel.
 
 ### Redeploy After Changing Env Vars
 
-In Railway, after adding/updating STRIPE_WEBHOOK_SECRET, trigger a redeploy:
-- Click **Deploy** ? **Redeploy** in the Railway Dashboard
+In your production environment, after adding/updating STRIPE_WEBHOOK_SECRET, trigger a redeploy:
+- Click **Deploy** ? **Redeploy** in your production environment Dashboard
 - Or push a new commit to GitHub
 
 ---
@@ -271,6 +271,6 @@ The Checkout page will show FPX as an option when paying with ONLINE method.
 - [ ] Test webhook: stripe trigger checkout.session.completed ? returns 200 OK
 - [ ] Full checkout flow works end-to-end locally
 - [ ] Stripe Dashboard webhook endpoint configured for production URL
-- [ ] STRIPE_WEBHOOK_SECRET added in Railway Variables
+- [ ] STRIPE_WEBHOOK_SECRET added in your production environment Variables
 - [ ] Stripe Dashboard ? Send test webhook ? returns 200 OK
 - [ ] Production checkout flow works end-to-end

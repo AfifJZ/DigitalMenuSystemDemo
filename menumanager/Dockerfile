@@ -1,5 +1,5 @@
 # ============================================================
-# Dockerfile — Build Spring Boot app for Railway / any container platform
+# Dockerfile — Build Spring Boot app for any container platform
 # ============================================================
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app

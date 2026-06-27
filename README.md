@@ -1,4 +1,4 @@
-# Digital Menu System
+﻿# Digital Menu System
 
 A Spring Boot 4.0.5 (Java 21) digital menu management system for restaurants and food businesses. Features menu management, QR code ordering, Stripe payments (cards + FPX), order tracking, and multi-branch support.
 
@@ -39,54 +39,7 @@ The app starts at http://localhost:8080
 
 # Deployment Guide
 
-## Option A: Railway (Recommended)
-
-Railway provides native Maven/Java support with managed MySQL. It is the easiest deployment path for this project.
-
-### Step 1: Push to GitHub
-```bash
-git add .
-git commit -m "Ready for Railway deployment"
-git push origin main
-```
-
-### Step 2: Create Railway Project
-1. Go to https://railway.app and sign in with GitHub
-2. Click **New Project** → **Deploy from GitHub repo**
-3. Select your repository
-4. Railway detects `menumanager/Dockerfile` — set **Root Directory** to `menumanager`
-
-### Step 3: Add MySQL Database
-1. In your Railway project dashboard, click **New** → **Database** → **Add MySQL**
-2. Railway automatically creates and links the database
-3. The following env vars are injected automatically: `MYSQL_URL`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`
-
-### Step 4: Set Environment Variables
-In Railway Dashboard → your service → **Variables**, add:
-
-| Variable | Value | Description |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | `sk_test_...` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` | Stripe webhook secret |
-| `PUBLIC_BASE_URL` | `https://your-app.railway.app` | Your production URL |
-| `MAIL_USERNAME` | `your-email@gmail.com` | Gmail for OTP sending |
-| `MAIL_PASSWORD` | `your-app-password` | Gmail app password |
-| `MAIL_CONSOLE_FALLBACK` | `false` | Disable OTP console print in production |
-| `STRIPE_CONNECT_ENABLED` | `true` | Enable Stripe Connect in production |
-| `JPA_SHOW_SQL` | `false` | Disable SQL logging in production |
-
-### Step 5: Deploy
-Railway auto-deploys when you push to GitHub. You can also click **Deploy** in the dashboard.
-
-### Step 6: Configure Stripe Webhook
-In Stripe Dashboard → **Webhooks** → **Add endpoint**:
-- **URL:** `https://your-app.railway.app/api/payments/stripe/webhook`
-- **Events:** `checkout.session.completed`
-- Copy the signing secret and set it as `STRIPE_WEBHOOK_SECRET` in Railway variables
-
----
-
-## Option B: Docker (Any Cloud VM)
+Deploy this Spring Boot application using Docker:
 
 ```bash
 cd menumanager
@@ -98,31 +51,33 @@ docker run -p 8080:8080 ^
   digital-menu-system
 ```
 
+Set the required environment variables (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `PUBLIC_BASE_URL`, etc.) in your hosting environment.
+
 ---
 
 ## Project Structure
 
 ```
 menumanager/
-├── Dockerfile              # Container build (for Railway / any cloud)
-├── railway.toml            # Railway deployment config
-├── pom.xml                 # Maven project config
-├── src/
-│   ├── main/
-│   │   ├── java/com/example/menumanager/
-│   │   │   ├── controller/   # Web controllers (Menu, Payment, Auth, Branch)
-│   │   │   ├── model/        # JPA entities (6 tables)
-│   │   │   ├── repository/   # Spring Data repos
-│   │   │   ├── service/      # Business logic (Orders, Email, QR, Stripe)
-│   │   │   ├── config/       # Web config, interceptors
-│   │   │   ├── dto/          # Data transfer objects
-│   │   │   ├── session/      # Session context objects
-│   │   │   └── util/         # Password utility
-│   │   └── resources/
-│   │       ├── application.properties  # Config (uses env vars)
-│   │       ├── static/                 # CSS, JS
-│   │       └── templates/             # Thymeleaf HTML templates
-│   └── test/
+|-- Dockerfile              # Container build (for any cloud platform)
+|-- pom.xml                 # Maven project config
+|-- src/
+|   |-- main/
+|   |   |-- java/com/example/menumanager/
+|   |   |   |-- controller/   # Web controllers (Menu, Payment, Auth, Branch)
+|   |   |   |-- model/        # JPA entities (6 tables)
+|   |   |   |-- repository/   # Spring Data repos
+|   |   |   |-- service/      # Business logic (Orders, Email, QR, Stripe)
+|   |   |   |-- config/       # Web config, interceptors
+|   |   |   |-- dto/          # Data transfer objects
+|   |   |   |-- session/      # Session context objects
+|   |   |   |-- util/         # Password utility
+|   |   |-- resources/
+|   |       |-- application.properties  # Config (uses env vars)
+|   |       |-- static/                 # CSS, JS
+|   |       |-- templates/             # Thymeleaf HTML templates
+|   |-- test/
 .env.example                   # Template for local dev env vars
 .gitignore
 README.md
+```
