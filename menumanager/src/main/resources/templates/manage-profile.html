@@ -29,7 +29,7 @@
         </div>
 
         <div class="row">
-            <div class="col-12 col-lg-8">
+            <div class="col-12 col-lg-8 offset-lg-2">
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white fw-bold border-bottom">
                         <i class="bi bi-info-circle text-primary me-2"></i>Organization Information
@@ -163,33 +163,6 @@
                 </div>
             </div>
 
-            <div class="col-12 col-lg-4">
-                <div class="card shadow-sm border-0 bg-primary-subtle">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-lightbulb text-primary me-2"></i>Account Info</h5>
-                        <p class="small text-muted">
-                            <i class="bi bi-info-circle me-1"></i>
-                            As the organization owner, you have access to view all branches' sales data and manage your account settings.
-                        </p>
-                        <hr>
-                        <h6 class="fw-bold small">Automatic linking</h6>
-                        <ul class="small text-muted ps-3 mb-0">
-                            <li class="mb-2"><strong>Pay at Counter</strong> &rarr; customers see this bank & account on the menu.</li>
-                            <li class="mb-2"><strong>Card / FPX</strong> &rarr; Stripe Connect account created automatically; payouts go to this bank.</li>
-                            <li>Stripe minimum <strong>RM 2.00</strong> for card & FPX.</li>
-                        </ul>
-                        <div th:if="${organization.stripeAccountId != null}" class="small text-success mt-3 mb-0">
-                            <i class="bi bi-check-circle me-1"></i>Stripe linked
-                            <span class="font-monospace" th:text="${organization.stripeAccountId}">acct_...</span>
-                        </div>
-                        <hr>
-                        <div class="small">
-                            <strong>Branches:</strong>
-                            <span th:text="${branchCount} + ' branch(es)'">0 branches</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 

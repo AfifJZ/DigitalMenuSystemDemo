@@ -10,21 +10,16 @@
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-primary shadow-sm no-print">
-        <div class="container-fluid">
-            <span class="navbar-brand fw-bold"><i class="bi bi-qr-code me-2"></i>Table QR Codes</span>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()">
-                    <i class="bi bi-printer me-1"></i>Print
-                </button>
-                <a href="/manage/setup" class="btn btn-outline-light btn-sm" th:if="${canAddBranch}">Add Branch</a>
-                <a href="/staff" class="btn btn-light btn-sm fw-bold">Menu</a>
-            </div>
-        </div>
-    </nav>
+    <div th:replace="~{fragments/admin-navbar :: adminNav('qr')}"></div>
 
     <div class="container my-4">
-        <div class="text-center mb-4">
+        <div class="d-flex justify-content-start mb-3 no-print">
+            <button type="button" class="btn btn-primary fw-bold" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>Print QR Codes
+            </button>
+        </div>
+
+        <div class="text-center mb-4 no-print">
             <h3 class="fw-bold mb-1" th:text="${branch.name}">Branch</h3>
             <p class="text-muted mb-0" th:text="${branch.location}">Location</p>
             <p class="small text-secondary mt-2">
@@ -41,7 +36,7 @@
                              th:alt="'QR code for table ' + ${t}"
                              class="img-fluid border rounded">
                         <p class="small text-muted mt-2 mb-0 text-break"
-                           th:text="${customerUrls[t - 1]}">URL</p>
+                           th:text="${customerUrls[t]}">URL</p>
                     </div>
                 </div>
             </div>

@@ -32,6 +32,10 @@ public class Branch {
     @Column(nullable = false)
     private String passwordHash;
 
+    /** Reversibly-encrypted password for display purposes (only decryptable with org admin auth). */
+    @Column(columnDefinition = "TEXT")
+    private String encryptedPassword;
+
     /** True after branch name, location, tables and password have been configured. */
     @Column(nullable = false)
     private boolean setupComplete = false;
@@ -50,6 +54,8 @@ public class Branch {
     public void setTableCount(int tableCount) { this.tableCount = tableCount; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public String getEncryptedPassword() { return encryptedPassword; }
+    public void setEncryptedPassword(String encryptedPassword) { this.encryptedPassword = encryptedPassword; }
     public boolean isSetupComplete() { return setupComplete; }
     public void setSetupComplete(boolean setupComplete) { this.setupComplete = setupComplete; }
 }

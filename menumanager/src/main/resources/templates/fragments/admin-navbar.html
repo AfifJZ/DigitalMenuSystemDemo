@@ -38,9 +38,10 @@
                 </li>
             </ul>
             <a class="btn btn-outline-light btn-sm fw-bold"
-               th:href="${managerSession?.branchId} ? '/customer?branch=' + ${managerSession.branchId} : '/customer'"
+               th:if="${!organizationLevel}"
+               th:href="${managerSession?.branchId} ? '/customer?branch=' + ${managerSession.branchId} + '&table=0' : '/customer'"
                target="_blank"
-               th:title="${managerSession?.branchId} ? 'View live menu for branch' : 'View live menu'">
+               th:title="${managerSession?.branchId} ? 'View live menu (table 0 — counter QR)' : 'View live menu'">
                 <i class="bi bi-box-arrow-up-right me-1"></i> View Live Menu
                 <span th:if="${currentBranch}" class="ms-1 small opacity-75" th:text="'(' + ${currentBranch.name} + ')'"></span>
             </a>

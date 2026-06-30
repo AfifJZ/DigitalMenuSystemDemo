@@ -104,7 +104,7 @@
                     <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Add New Item</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form th:action="@{/staff/save}" th:object="${newItem}" method="post">
+                <form th:action="@{/staff/save}" th:object="${newItem}" method="post" enctype="multipart/form-data">
                     <input type="hidden" th:field="*{id}"> 
                     
                     <div class="modal-body bg-light">
@@ -117,7 +117,15 @@
                             </div>
                         </div>
                         <div class="mb-3"><label class="form-label text-secondary small fw-bold">Description</label><textarea class="form-control" th:field="*{description}" rows="2"></textarea></div>
-                        <div class="mb-3"><label class="form-label text-secondary small fw-bold">Image URL</label><input type="text" class="form-control" th:field="*{imageUrl}"></div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-bold">Image</label>
+                            <input type="file" class="form-control" name="imageFile" accept="image/*" onchange="window.handleImagePreview(this)">
+                            <div class="form-text">Upload an image (PNG, JPG, etc.) <strong>or</strong> enter URL below</div>
+                        </div>
+                        <div class="mb-3"><label class="form-label text-secondary small fw-bold">Image URL (optional)</label><input type="text" class="form-control" th:field="*{imageUrl}" placeholder="https://example.com/image.jpg"></div>
+                        <div id="imagePreviewContainer" class="mb-3" style="display: none;">
+                            <img id="imagePreview" src="" alt="Preview" style="max-width: 200px; max-height: 200px;" class="border rounded">
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

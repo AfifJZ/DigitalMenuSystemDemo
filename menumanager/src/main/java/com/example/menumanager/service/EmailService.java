@@ -57,8 +57,15 @@ public class EmailService {
     }
 
     private boolean deliverOtp(String toEmail, String code, String label, String subject, String introLine) {
+        log.info("Attempting to send OTP email to: {}", toEmail);
+        log.info("Mail configured: {}, Using console fallback: {}", isMailConfigured(), isUsingConsoleFallback());
+        
         if (isMailConfigured()) {
             try {
+                log.info("Sending email via SMTP - Host: {}, Username: {}", 
+                    System.getProperty("spring.mail.host", "not set"), 
+                    System.getProperty("spring.mail.username", "not set"));
+                
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(fromAddress.isBlank() ? mailUsername : fromAddress);
                 message.setTo(toEmail.trim());
@@ -71,11 +78,15 @@ public class EmailService {
                         + "If you did not request this, you can ignore this email."
                 );
                 mailSender.send(message);
-                log.info("OTP email sent to {}", toEmail);
+                log.info("✅ OTP email successfully sent to {}", toEmail);
                 return true;
             } catch (Exception e) {
-                log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+                log.error("❌ Failed to send OTP email to {}: {}", toEmail, e.getMessage());
+                log.error("Error details:", e);
             }
+        } else {
+            log.warn("Mail not configured. Mail username: '{}', Fallback enabled: {}", 
+                mailUsername, consoleFallback);
         }
 
         if (consoleFallback) {

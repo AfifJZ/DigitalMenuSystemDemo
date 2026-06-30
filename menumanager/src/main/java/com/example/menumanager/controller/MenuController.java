@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.menumanager.model.Branch;
 import com.example.menumanager.model.Order;
@@ -102,7 +105,9 @@ public class MenuController {
     }
 
     @PostMapping("/staff/save")
-    public String saveItem(@ModelAttribute PublicMenu menuItem, HttpSession httpSession,
+    public String saveItem(@ModelAttribute PublicMenu menuItem,
+                           @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+                           HttpSession httpSession,
                            jakarta.servlet.http.HttpServletRequest request) {
         // Tag every new item with the branch the staff is currently
         // working in. Without this, an item would be branch-less and
@@ -114,6 +119,21 @@ public class MenuController {
                     || !manager.getBranchId().equals(menuItem.getBranchId()))) {
             menuItem.setBranchId(manager.getBranchId());
         }
+
+        // Handle image upload
+        if (imageFile != null && !imageFile.isEmpty()) {
+            try {
+                String fileName = System.currentTimeMillis() + "_" + imageFile.getOriginalFilename();
+                java.nio.file.Path uploadPath = java.nio.file.Paths.get("src/main/resources/static/uploads");
+                java.nio.file.Files.createDirectories(uploadPath);
+                java.nio.file.Files.copy(imageFile.getInputStream(), uploadPath.resolve(fileName));
+                menuItem.setImageUrl("/uploads/" + fileName);
+            } catch (Exception e) {
+                // Log error but continue with save
+                System.err.println("Failed to upload image: " + e.getMessage());
+            }
+        }
+
         publicMenuRepo.save(menuItem);
         return redirectBack(request);
     }
@@ -446,34 +466,48 @@ public class MenuController {
     }
 
     @GetMapping("/manage/export")
-    public void exportDashboardReport(HttpServletResponse response, HttpSession httpSession) throws Exception {
+    public void exportDashboardReport(
+            HttpServletResponse response,
+            HttpSession httpSession,
+            @RequestParam(required = false) Long branchId
+    ) throws Exception {
         ManagerSession manager = managerAuthService.getSession(httpSession);
         if (manager == null) {
             response.sendError(403, "Unauthorized");
             return;
         }
 
+        Long filterBranchId = null;
+        String filenameSuffix = "revenue_report_" + LocalDate.now();
+
+        if (manager.isOrganizationLevel()) {
+            if (branchId != null) {
+                Branch branch = branchRepo.findById(branchId).orElse(null);
+                if (branch == null
+                        || branch.getOrganization() == null
+                        || !branch.getOrganization().getId().equals(manager.getOrganizationId())) {
+                    response.sendError(403, "Unauthorized");
+                    return;
+                }
+                filterBranchId = branchId;
+                filenameSuffix = "branch_" + branch.getName().replaceAll("[^a-zA-Z0-9_-]", "_") + "_" + LocalDate.now();
+            }
+        } else {
+            filterBranchId = manager.getBranchId();
+        }
+
         response.setContentType("text/csv");
-        response.setHeader("Content-Disposition", "attachment; filename=\"revenue_report_" + LocalDate.now() + ".csv\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filenameSuffix + ".csv\"");
 
         PrintWriter writer = response.getWriter();
         writer.println("Order ID,Time,Status,Total Amount (RM),Items,Refund Reason");
 
-        List<Order> historyOrders;
-        if (manager.isOrganizationLevel()) {
-            // Owner: export all branches
-            historyOrders = orderRepo.findAll(Sort.by(Sort.Direction.DESC, "orderTime")).stream()
-                    .filter(o -> o.getOrderTime().toLocalDate().equals(LocalDate.now()))
-                    .filter(o -> List.of("KITCHEN", "COMPLETED", "REFUNDED").contains(o.getStatus()))
-                    .toList();
-        } else {
-            // Branch manager: export only their branch
-            historyOrders = orderRepo.findAll(Sort.by(Sort.Direction.DESC, "orderTime")).stream()
-                    .filter(o -> o.getOrderTime().toLocalDate().equals(LocalDate.now()))
-                    .filter(o -> List.of("KITCHEN", "COMPLETED", "REFUNDED").contains(o.getStatus()))
-                    .filter(o -> manager.getBranchId() == null || manager.getBranchId().equals(o.getBranchId()))
-                    .toList();
-        }
+        final Long exportBranchId = filterBranchId;
+        List<Order> historyOrders = orderRepo.findAll(Sort.by(Sort.Direction.DESC, "orderTime")).stream()
+                .filter(o -> o.getOrderTime().toLocalDate().equals(LocalDate.now()))
+                .filter(o -> List.of("KITCHEN", "COMPLETED", "REFUNDED").contains(o.getStatus()))
+                .filter(o -> exportBranchId == null || exportBranchId.equals(o.getBranchId()))
+                .toList();
 
         for (Order order : historyOrders) {
             String itemsString = orderItemRepo.findByOrderId(order.getId()).stream()
@@ -533,6 +567,28 @@ public class MenuController {
         model.addAttribute("period", dashboardPeriod.name().toLowerCase());
         model.addAttribute("dashboardBranchLabel", label);
         model.addAttribute("dashboardJson", dashboardJson);
+
+        // 5) Best-selling items (aggregate across all paid orders today)
+        java.util.Map<String, Long> itemSales = new java.util.LinkedHashMap<>();
+        for (Order order : historyOrders) {
+            List<OrderItem> items = orderItemRepo.findByOrderId(order.getId());
+            for (OrderItem item : items) {
+                if (item == null || item.getName() == null) continue;
+                long qty = item.getQuantity() == null ? 0L : item.getQuantity();
+                itemSales.merge(item.getName(), qty, Long::sum);
+            }
+        }
+        List<java.util.Map<String, Object>> bestSellingItems = itemSales.entrySet().stream()
+                .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(5)
+                .map(e -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("name", e.getKey());
+                    m.put("quantity", e.getValue());
+                    return m;
+                })
+                .collect(Collectors.toList());
+        model.addAttribute("bestSellingItems", bestSellingItems);
 
         // Payout status used by the bank-account card on the dashboard
         if (manager != null && manager.isOrganizationLevel()) {

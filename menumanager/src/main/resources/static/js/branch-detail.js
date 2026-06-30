@@ -1,56 +1,121 @@
 /* ==========================================================================
    /manage/branch/{id}
-   Toggles the masked branch password field, and client-side validates
-   the new/confirm password match.
+   Toggles the masked branch password field, with org-password verification
+   for on-demand reveal. Also validates the new/confirm password match.
    ========================================================================== */
 (function () {
     const inputEl = document.getElementById('maskedBranchPassword');
     const toggleBtn = document.getElementById('toggleMaskBtn');
     const toggleIcon = document.getElementById('toggleIcon');
+    const modalEl = document.getElementById('orgPasswordModal');
 
     var showingPassword = false;
+    var pendingReveal = false;
 
     if (inputEl && toggleBtn && toggleIcon) {
-        // Check if the input currently has a real password value
-        var realPassword = inputEl.value;
-        var hasRealPassword = realPassword && realPassword.length > 0;
-
         toggleBtn.addEventListener('click', function () {
-            // Re-check the value on each click (in case it changed)
-            realPassword = inputEl.value;
-            hasRealPassword = realPassword && realPassword.length > 0;
-
-            if (!hasRealPassword) {
-                // No password to reveal — show feedback
-                showToast('Password is securely hashed — cannot be revealed. Use the form below to set a new one.', 'warning');
+            // If a plain password is already loaded in the input, toggle directly
+            var currentValue = inputEl.value;
+            if (currentValue && currentValue.length > 0) {
+                if (showingPassword) {
+                    inputEl.type = 'password';
+                    toggleIcon.className = 'bi bi-eye-slash-fill';
+                    toggleBtn.title = 'Show password';
+                    showingPassword = false;
+                } else {
+                    inputEl.type = 'text';
+                    toggleIcon.className = 'bi bi-eye-fill';
+                    toggleBtn.title = 'Hide password';
+                    showingPassword = true;
+                }
                 return;
             }
 
-            if (showingPassword) {
-                // Currently showing real password → mask it
-                inputEl.type = 'password';
-                toggleIcon.className = 'bi bi-eye-slash-fill';
-                toggleBtn.title = 'Show password';
-                showingPassword = false;
-            } else {
-                // Currently masked → show real password
-                inputEl.type = 'text';
-                toggleIcon.className = 'bi bi-eye-fill';
-                toggleBtn.title = 'Hide password';
-                showingPassword = true;
+            // No plain password loaded � check if one exists to decrypt
+            var hasPassword = inputEl.getAttribute('data-has-password') === 'true';
+            if (!hasPassword) {
+                showToast('No branch password has been set yet. Use the form below to create one.', 'warning');
+                return;
             }
-        });
 
-        // Set initial icon based on whether password is available
-        if (!hasRealPassword) {
-            toggleIcon.className = 'bi bi-lock-fill';
-            toggleBtn.title = 'Click for info — password cannot be revealed';
-        }
+            // Show the org password verification modal
+            pendingReveal = true;
+            document.getElementById('orgPasswordInput').value = '';
+            document.getElementById('orgPasswordError').classList.add('d-none');
+            var bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+        });
     }
 
-    // Toast notification helper
+    // --- Org password confirmation --------------------------------------------
+
+    var confirmBtn = document.getElementById('orgPasswordConfirmBtn');
+    if (confirmBtn && modalEl) {
+        confirmBtn.addEventListener('click', function () {
+            var orgPassword = document.getElementById('orgPasswordInput').value;
+            if (!orgPassword || orgPassword.length < 1) {
+                showError('Please enter your organization password.');
+                return;
+            }
+
+            var branchId = toggleBtn.getAttribute('data-branch-id');
+            if (!branchId) {
+                showError('Branch ID not found. Please refresh the page.');
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifying...';
+
+            fetch('/manage/branch/' + branchId + '/reveal-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'orgPassword=' + encodeURIComponent(orgPassword)
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Verify &amp; reveal';
+
+                if (data.ok) {
+                    // Close the modal
+                    var bsModal = bootstrap.Modal.getInstance(modalEl);
+                    if (bsModal) bsModal.hide();
+
+                    // Populate the input with the decrypted password and show it
+                    inputEl.value = data.password;
+                    inputEl.type = 'text';
+                    toggleIcon.className = 'bi bi-eye-fill';
+                    toggleBtn.title = 'Hide password';
+                    showingPassword = true;
+                } else {
+                    showError(data.error || 'Verification failed. Please try again.');
+                }
+            })
+            .catch(function () {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Verify &amp; reveal';
+                showError('Network error. Please try again.');
+            });
+        });
+
+        // Clear error when modal is opened and reset on close
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('orgPasswordInput').value = '';
+            document.getElementById('orgPasswordError').classList.add('d-none');
+            pendingReveal = false;
+        });
+    }
+
+    function showError(msg) {
+        var errEl = document.getElementById('orgPasswordError');
+        errEl.textContent = msg;
+        errEl.classList.remove('d-none');
+    }
+
+    // --- Toast notification helper ---
+
     function showToast(message, type) {
-        // Remove existing toast if any
         var old = document.getElementById('dynamicToast');
         if (old) old.remove();
 
@@ -68,7 +133,8 @@
         bsToast.show();
     }
 
-    // Password match validation
+    // --- Password match validation ---
+
     var pwForm = document.getElementById('branchPasswordForm');
     if (pwForm) {
         pwForm.addEventListener('submit', function (e) {

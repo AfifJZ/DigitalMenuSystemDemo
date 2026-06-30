@@ -45,7 +45,8 @@ public class BranchQrController {
         }
 
         List<String> customerUrls = new ArrayList<>();
-        for (int t = 1; t <= branch.getTableCount(); t++) {
+        // Generate QR codes from table 0 (counter/display) up to tableCount
+        for (int t = 0; t <= branch.getTableCount(); t++) {
             customerUrls.add(qrCodeService.buildCustomerTableUrl(branchId, t));
         }
 
@@ -76,7 +77,7 @@ public class BranchQrController {
         if (branch == null || !branch.getOrganization().getId().equals(session.getOrganizationId())) {
             return ResponseEntity.notFound().build();
         }
-        if (table < 1 || table > branch.getTableCount()) {
+        if (table < 0 || table > branch.getTableCount()) {
             return ResponseEntity.badRequest().build();
         }
 

@@ -13,6 +13,8 @@ function resetStaffModal() {
     document.getElementById('price').value = '';
     document.getElementById('description').value = '';
     document.getElementById('imageUrl').value = '';
+    document.getElementById('imageFile').value = '';
+    document.getElementById('imagePreviewContainer').style.display = 'none';
 }
 
 function populateStaffModal(button) {
@@ -28,5 +30,22 @@ function populateStaffModal(button) {
     document.getElementById('imageUrl').value    = button.getAttribute('data-img');
 }
 
+function handleImagePreview(input) {
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const preview = document.getElementById('imagePreview');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
 window.resetStaffModal    = resetStaffModal;
 window.populateStaffModal = populateStaffModal;
+window.handleImagePreview = handleImagePreview;

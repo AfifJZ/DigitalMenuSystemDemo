@@ -10,12 +10,7 @@
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-primary shadow-sm">
-        <div class="container">
-            <span class="navbar-brand fw-bold"><i class="bi bi-building me-2"></i>Branch Setup</span>
-            <a th:if="${branchesConfigured > 0}" href="/staff" class="btn btn-outline-light btn-sm">Go to Menu</a>
-        </div>
-    </nav>
+    <div th:replace="~{fragments/admin-navbar :: adminNav('setup')}"></div>
 
     <div class="container my-5">
         <div class="row justify-content-center">

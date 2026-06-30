@@ -1,4 +1,4 @@
-package com.example.menumanager.controller;
+﻿package com.example.menumanager.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -183,6 +183,7 @@ public class ManageAuthController {
     @PostMapping("/manage/branch/switch")
     public String switchBranch(
             @RequestParam Long branchId,
+            @RequestParam(required = false) String redirect,
             HttpSession httpSession
     ) {
         ManagerSession session = authService.getSession(httpSession);
@@ -190,7 +191,10 @@ public class ManageAuthController {
             authService.switchBranch(session, branchId);
             authService.saveSession(httpSession, session);
         }
-        return "redirect:/staff";
+        if (redirect != null && !redirect.isBlank() && redirect.startsWith("/manage/")) {
+            return "redirect:" + redirect;
+        }
+        return "redirect:/manage/branches";
     }
 
     @GetMapping("/manage/profile")
@@ -367,3 +371,4 @@ public class ManageAuthController {
         return "redirect:/manage/login";
     }
 }
+
