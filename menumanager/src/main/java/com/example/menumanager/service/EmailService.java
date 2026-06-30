@@ -16,14 +16,14 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:}")
+    @Value("${MAIL_USERNAME:}")
     private String mailUsername;
 
-    @Value("${app.mail.from:}")
+    @Value("${MAIL_FROM:}")
     private String fromAddress;
 
     /** When true, prints OTP to the terminal if SMTP is not configured (great for local testing). */
-    @Value("${app.mail.console-fallback:true}")
+    @Value("${MAIL_CONSOLE_FALLBACK:true}")
     private boolean consoleFallback;
 
     public boolean sendRegistrationOtp(String toEmail, String code) {
