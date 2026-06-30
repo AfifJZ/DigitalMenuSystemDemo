@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,9 @@ public class ManagerAuthService {
     @Autowired private EmailService emailService;
     @Autowired private OtpService otpService;
     @Autowired private StripeConnectService stripeConnectService;
+
+    @Value("${app.crypto.secret}")
+    private String cryptoSecret;
 
     /** Step 1 of registration: validate details, store pending data, send OTP. */
     public Optional<String> startRegistration(HttpSession httpSession, String orgName, String email, String password) {
@@ -191,6 +195,7 @@ public class ManagerAuthService {
         branch.setLocation(location.trim());
         branch.setTableCount(tableCount);
         branch.setPasswordHash(PasswordUtil.hash(password));
+        branch.setEncryptedPassword(PasswordUtil.encrypt(password, cryptoSecret));
         branch.setSetupComplete(true);
         branchRepo.save(branch);
         return BranchSetupResult.success(branch.getId());
@@ -277,6 +282,7 @@ public class ManagerAuthService {
             return Optional.of("Branch not found.");
         }
         branch.setPasswordHash(PasswordUtil.hash(newPassword));
+        branch.setEncryptedPassword(PasswordUtil.encrypt(newPassword, cryptoSecret));
         branchRepo.save(branch);
         return Optional.empty();
     }
@@ -567,6 +573,7 @@ public class ManagerAuthService {
                 return Optional.of("Branch not found.");
             }
             branch.setPasswordHash(PasswordUtil.hash(newPassword));
+            branch.setEncryptedPassword(PasswordUtil.encrypt(newPassword, cryptoSecret));
             branchRepo.save(branch);
         } else {
             Organization org = organizationRepo.findById(targetId).orElse(null);
@@ -707,10 +714,11 @@ public class ManagerAuthService {
             Branch branch = branchRepo.findById(targetId).orElse(null);
             if (branch == null) return Optional.of("Branch not found.");
             branch.setPasswordHash(PasswordUtil.hash(newPassword));
+            branch.setEncryptedPassword(PasswordUtil.encrypt(newPassword, cryptoSecret));
             branchRepo.save(branch);
         } else {
             Organization org = organizationRepo.findById(targetId).orElse(null);
-            if (org == null) return Optional.of("Organization not found.");
+            if (org == null) return Optional.of("Account not found.");
             org.setPasswordHash(PasswordUtil.hash(newPassword));
             organizationRepo.save(org);
         }
