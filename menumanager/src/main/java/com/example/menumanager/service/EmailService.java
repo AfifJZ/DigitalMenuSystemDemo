@@ -8,6 +8,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 public class EmailService {
 
@@ -25,6 +27,18 @@ public class EmailService {
     /** When true, prints OTP to the terminal if SMTP is not configured (great for local testing). */
     @Value("${MAIL_CONSOLE_FALLBACK:true}")
     private boolean consoleFallback;
+
+    @PostConstruct
+    public void logConfig() {
+        log.info("=== EMAIL CONFIG DEBUG ===");
+        log.info("MAIL_USERNAME env var: '{}'", System.getenv("MAIL_USERNAME"));
+        log.info("mailUsername @Value: '{}'", mailUsername);
+        log.info("MAIL_FROM env var: '{}'", System.getenv("MAIL_FROM"));
+        log.info("fromAddress @Value: '{}'", fromAddress);
+        log.info("MAIL_CONSOLE_FALLBACK: {}", consoleFallback);
+        log.info("spring.mail.username property: '{}'", System.getProperty("spring.mail.username", "NOT SET"));
+        log.info("==========================");
+    }
 
     public boolean sendRegistrationOtp(String toEmail, String code) {
         return deliverOtp(
