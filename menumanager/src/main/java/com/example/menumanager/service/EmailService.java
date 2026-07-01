@@ -22,7 +22,7 @@ public class EmailService {
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @Value("${mailgun.api-key:}")
+    @Value("${mailgun.api-key:${MAIL_PASSWORD:}}")
     private String mailgunApiKey;
 
     @Value("${mailgun.domain:sandbox269e1414295f4ff6aaf977fb5417036e.mailgun.org}")
