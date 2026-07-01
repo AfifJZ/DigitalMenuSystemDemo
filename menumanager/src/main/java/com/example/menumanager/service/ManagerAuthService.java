@@ -66,6 +66,8 @@ public class ManagerAuthService {
         return Optional.empty();
     }
 
+    
+
     /** Step 2 of registration: verify OTP and create the organization account. */
     @Transactional
     public Optional<String> completeRegistration(HttpSession httpSession, String code) {
@@ -635,6 +637,64 @@ public class ManagerAuthService {
         org.setBranchLimit(10);
         org.setEmailVerified(true);
         organizationRepo.save(org);
+        return Optional.empty();
+    }
+
+    // New direct reset method used by simplified controller
+    @Transactional
+    public Optional<String> resetPasswordDirect(String resetType, String organizationName,
+                                                String branchName, String email, String newPassword) {
+        // Reuse existing validation logic to find target and update password
+        if (email == null || email.isBlank()) return Optional.of("Email is required.");
+        String normalizedEmail = email.trim();
+
+        String payload;
+        Long targetId = null;
+        boolean isBranch = "branch".equalsIgnoreCase(resetType);
+
+        if (isBranch) {
+            if (branchName == null || branchName.isBlank() || organizationName == null || organizationName.isBlank()) {
+                return Optional.of("Branch name and organization name are required.");
+            }
+            Organization org = organizationRepo.findByNameIgnoreCase(organizationName.trim()).orElse(null);
+            if (org == null || !org.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                return Optional.of("No matching branch account found for these details.");
+            }
+            Branch branch = branchRepo.findByOrganization_IdAndNameIgnoreCase(org.getId(), branchName.trim())
+                    .filter(Branch::isSetupComplete)
+                    .orElse(null);
+            if (branch == null) {
+                return Optional.of("No matching branch account found for these details.");
+            }
+            targetId = branch.getId();
+        } else {
+            if (organizationName == null || organizationName.isBlank()) {
+                return Optional.of("Organization name is required.");
+            }
+            Organization org = organizationRepo.findByNameIgnoreCase(organizationName.trim()).orElse(null);
+            if (org == null || !org.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                return Optional.of("No matching organization account found for these details.");
+            }
+            targetId = org.getId();
+        }
+
+        int minLen = isBranch ? 4 : 6;
+        if (newPassword == null || newPassword.length() < minLen) {
+            return Optional.of("Password must be at least " + minLen + " characters.");
+        }
+
+        if (isBranch) {
+            Branch branch = branchRepo.findById(targetId).orElse(null);
+            if (branch == null) return Optional.of("Branch not found.");
+            branch.setPasswordHash(PasswordUtil.hash(newPassword));
+            branch.setEncryptedPassword(PasswordUtil.encrypt(newPassword, cryptoSecret));
+            branchRepo.save(branch);
+        } else {
+            Organization org = organizationRepo.findById(targetId).orElse(null);
+            if (org == null) return Optional.of("Account not found.");
+            org.setPasswordHash(PasswordUtil.hash(newPassword));
+            organizationRepo.save(org);
+        }
         return Optional.empty();
     }
 

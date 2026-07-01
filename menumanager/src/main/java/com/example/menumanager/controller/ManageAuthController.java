@@ -42,27 +42,21 @@ public class ManageAuthController {
             redirectAttributes.addFlashAttribute("activeTab", "register");
             return "redirect:/manage/login";
         }
-        // Step 1 of registration: validate, store the pending data in the
-        // session and ask OtpService + EmailService to send a 6-digit code.
-        var error = authService.startRegistration(httpSession, organizationName, email, password);
+        // Use single-step registration (no OTP)
+        var error = authService.register(organizationName, email, password);
         if (error.isPresent()) {
             redirectAttributes.addFlashAttribute("error", error.get());
             redirectAttributes.addFlashAttribute("activeTab", "register");
             return "redirect:/manage/login";
         }
-        redirectAttributes.addFlashAttribute("email", email);
-        return "redirect:/manage/verify-email";
+        redirectAttributes.addFlashAttribute("success", "Registration complete. Please log in.");
+        return "redirect:/manage/login";
     }
 
     @GetMapping("/manage/verify-email")
     public String verifyEmailPage(HttpSession httpSession, Model model) {
-        var ctx = authService.getRegistrationContext(httpSession);
-        if (ctx == null || ctx.isExpired()) {
-            return "redirect:/manage/login";
-        }
-        model.addAttribute("email", ctx.getEmail());
-        model.addAttribute("devMode", emailService.isUsingConsoleFallback());
-        return "manage-verify-email";
+        // OTP verification removed; redirect to login.
+        return "redirect:/manage/login";
     }
 
     @PostMapping("/manage/verify-email")
@@ -71,25 +65,15 @@ public class ManageAuthController {
             HttpSession httpSession,
             RedirectAttributes redirectAttributes
     ) {
-        var error = authService.completeRegistration(httpSession, code);
-        if (error.isPresent()) {
-            redirectAttributes.addFlashAttribute("error", error.get());
-            return "redirect:/manage/verify-email";
-        }
-        redirectAttributes.addFlashAttribute("success",
-                "Email verified! Your organization has been created. Please log in.");
+        // Verification endpoint retained for compatibility but no longer used.
         return "redirect:/manage/login";
     }
 
     @PostMapping("/manage/verify-email/resend")
     public String resendVerificationOtp(HttpSession httpSession, RedirectAttributes redirectAttributes) {
-        var error = authService.resendRegistrationOtp(httpSession);
-        if (error.isPresent()) {
-            redirectAttributes.addFlashAttribute("error", error.get());
-        } else {
-            redirectAttributes.addFlashAttribute("success", "A new verification code has been sent.");
-        }
-        return "redirect:/manage/verify-email";
+        // No-op since OTP flow removed.
+        redirectAttributes.addFlashAttribute("info", "Email verification has been disabled.");
+        return "redirect:/manage/login";
     }
 
     @PostMapping("/manage/login")
@@ -321,26 +305,30 @@ public class ManageAuthController {
             @RequestParam(required = false) String organizationName,
             @RequestParam(required = false) String branchName,
             @RequestParam String email,
+            @RequestParam String newPassword,
+            @RequestParam String confirmPassword,
             HttpSession httpSession,
             RedirectAttributes redirectAttributes
     ) {
-        String verificationCode = authService.generatePasswordReset(resetType, organizationName, branchName, email);
-        if (verificationCode == null) {
-            redirectAttributes.addFlashAttribute("error", "Organization/branch name or email not found.");
+        if (!newPassword.equals(confirmPassword)) {
+            redirectAttributes.addFlashAttribute("error", "Passwords do not match.");
             redirectAttributes.addFlashAttribute("resetType", resetType);
             redirectAttributes.addFlashAttribute("organizationName", organizationName);
             redirectAttributes.addFlashAttribute("branchName", branchName);
             redirectAttributes.addFlashAttribute("email", email);
             return "redirect:/manage/forgot-password";
         }
-        emailService.sendVerificationCode(email, verificationCode);
-        System.out.println("✅ Verification code sent to: " + email);
-        redirectAttributes.addFlashAttribute("resetType", resetType);
-        redirectAttributes.addFlashAttribute("organizationName", organizationName);
-        redirectAttributes.addFlashAttribute("branchName", branchName);
-        redirectAttributes.addFlashAttribute("email", email);
-        redirectAttributes.addFlashAttribute("verificationSent", true);
-        return "redirect:/manage/forgot-password";
+        var error = authService.resetPasswordDirect(resetType, organizationName, branchName, email, newPassword);
+        if (error.isPresent()) {
+            redirectAttributes.addFlashAttribute("error", error.get());
+            redirectAttributes.addFlashAttribute("resetType", resetType);
+            redirectAttributes.addFlashAttribute("organizationName", organizationName);
+            redirectAttributes.addFlashAttribute("branchName", branchName);
+            redirectAttributes.addFlashAttribute("email", email);
+            return "redirect:/manage/forgot-password";
+        }
+        redirectAttributes.addFlashAttribute("success", "Password reset successfully. Please log in.");
+        return "redirect:/manage/login";
     }
 
     @PostMapping("/manage/reset-password")
@@ -354,20 +342,7 @@ public class ManageAuthController {
             @RequestParam String confirmPassword,
             RedirectAttributes redirectAttributes
     ) {
-        if (!newPassword.equals(confirmPassword)) {
-            redirectAttributes.addFlashAttribute("error", "Passwords do not match.");
-            redirectAttributes.addFlashAttribute("resetType", resetType);
-            redirectAttributes.addFlashAttribute("verificationSent", true);
-            return "redirect:/manage/forgot-password";
-        }
-        var error = authService.resetPassword(resetType, organizationName, branchName, email, code, newPassword);
-        if (error.isPresent()) {
-            redirectAttributes.addFlashAttribute("error", error.get());
-            redirectAttributes.addFlashAttribute("resetType", resetType);
-            redirectAttributes.addFlashAttribute("verificationSent", true);
-            return "redirect:/manage/forgot-password";
-        }
-        redirectAttributes.addFlashAttribute("success", "Password reset successfully. Please log in.");
+        // Legacy endpoint kept for compatibility but OTP verification removed.
         return "redirect:/manage/login";
     }
 }
