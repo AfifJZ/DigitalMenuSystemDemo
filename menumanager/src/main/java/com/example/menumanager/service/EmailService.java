@@ -1,31 +1,40 @@
 package com.example.menumanager.service;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Base64;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final HttpClient httpClient = HttpClient.newHttpClient();
 
-    @Autowired
-    private JavaMailSender mailSender;
+    @Value("${mailgun.api-key:}")
+    private String mailgunApiKey;
 
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
+    @Value("${mailgun.domain:sandbox269e1414295f4ff6aaf977fb5417036e.mailgun.org}")
+    private String mailgunDomain;
 
-    @Value("${spring.mail.host:smtp.mailgun.org}")
-    private String mailHost;
+    @Value("${mailgun.api-base-url:https://api.mailgun.net}")
+    private String mailgunApiBaseUrl;
 
     @Value("${app.mail.from:}")
     private String fromAddress;
 
-    /** When true, prints OTP to the terminal if SMTP is not configured (great for local testing). */
+    /** When true, prints OTP to the terminal if Mailgun is not configured or send fails. */
     @Value("${app.mail.console-fallback:true}")
     private boolean consoleFallback;
 
@@ -65,20 +74,14 @@ public class EmailService {
         
         if (isMailConfigured()) {
             try {
-                log.info("Sending email via SMTP - Host: {}, Username: {}", mailHost, mailUsername);
-                
-                SimpleMailMessage message = new SimpleMailMessage();
-                message.setFrom(fromAddress.isBlank() ? mailUsername : fromAddress);
-                message.setTo(toEmail.trim());
-                message.setSubject(subject);
-                message.setText(
-                        introLine + "\n\n"
+                String from = fromAddress.isBlank() ? "postmaster@" + mailgunDomain : fromAddress;
+                log.info("Sending email via Mailgun API - Domain: {}, From: {}", mailgunDomain, from);
+                String body = introLine + "\n\n"
                         + "Your verification code is:\n\n"
                         + "    " + code + "\n\n"
                         + "This code expires in 15 minutes.\n\n"
-                        + "If you did not request this, you can ignore this email."
-                );
-                mailSender.send(message);
+                        + "If you did not request this, you can ignore this email.";
+                sendViaMailgun(from, toEmail.trim(), subject, body);
                 log.info("✅ OTP email successfully sent to {}", toEmail);
                 return true;
             } catch (Exception e) {
@@ -86,8 +89,8 @@ public class EmailService {
                 log.error("Error details:", e);
             }
         } else {
-            log.warn("Mail not configured. Mail username: '{}', Fallback enabled: {}", 
-                mailUsername, consoleFallback);
+            log.warn("Mail not configured. Mailgun domain: '{}', Fallback enabled: {}", 
+                mailgunDomain, consoleFallback);
         }
 
         if (consoleFallback) {
@@ -99,14 +102,41 @@ public class EmailService {
     }
 
     public boolean isMailConfigured() {
-        return mailUsername != null
-                && !mailUsername.isBlank()
-                && !mailUsername.startsWith("REPLACE_")
-                && !mailUsername.startsWith("your-");
+        return mailgunApiKey != null
+                && !mailgunApiKey.isBlank()
+                && mailgunDomain != null
+                && !mailgunDomain.isBlank();
     }
 
     public boolean isUsingConsoleFallback() {
         return !isMailConfigured() && consoleFallback;
+    }
+
+    private void sendViaMailgun(String from, String to, String subject, String text) throws Exception {
+        String requestBody = "from=" + encode(from)
+                + "&to=" + encode(to)
+                + "&subject=" + encode(subject)
+                + "&text=" + encode(text);
+
+        String url = mailgunApiBaseUrl + "/v3/" + mailgunDomain + "/messages";
+        String auth = Base64.getEncoder().encodeToString(("api:" + mailgunApiKey).getBytes(StandardCharsets.UTF_8));
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(10))
+                .header("Authorization", "Basic " + auth)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(BodyPublishers.ofString(requestBody))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new RuntimeException("Mailgun send failed: " + response.statusCode() + " " + response.body());
+        }
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private void printOtpToConsole(String toEmail, String code, String label) {
