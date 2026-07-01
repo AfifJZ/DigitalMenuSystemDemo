@@ -61,7 +61,6 @@ git push origin main
 1. In your Railway project dashboard, click **New** → **Database** → **Add MySQL**
 2. Railway automatically creates and links the database
 3. The following env vars are **injected automatically**: `MYSQL_URL`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`
-   - This app also accepts the alternate names `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`
 4. Your app already reads these (see `application.properties`), so no extra config needed
 
 ### Step 4: Set Environment Variables
