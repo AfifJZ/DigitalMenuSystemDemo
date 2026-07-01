@@ -19,6 +19,9 @@ public class EmailService {
     @Value("${spring.mail.username:}")
     private String mailUsername;
 
+    @Value("${spring.mail.host:smtp.mailgun.org}")
+    private String mailHost;
+
     @Value("${app.mail.from:}")
     private String fromAddress;
 
@@ -62,9 +65,7 @@ public class EmailService {
         
         if (isMailConfigured()) {
             try {
-                log.info("Sending email via SMTP - Host: {}, Username: {}", 
-                    System.getProperty("spring.mail.host", "not set"), 
-                    System.getProperty("spring.mail.username", "not set"));
+                log.info("Sending email via SMTP - Host: {}, Username: {}", mailHost, mailUsername);
                 
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(fromAddress.isBlank() ? mailUsername : fromAddress);
