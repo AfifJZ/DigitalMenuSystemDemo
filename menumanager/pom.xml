@@ -56,12 +56,6 @@
 			<version>28.2.0</version>
 		</dependency>
 
-		<!-- Spring Mail for email verification -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
-
 		<!-- Loads .env file into system environment variables -->
 		<dependency>
 			<groupId>io.github.cdimascio</groupId>

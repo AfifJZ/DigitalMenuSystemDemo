@@ -86,7 +86,12 @@ public class EmailService {
                 return true;
             } catch (Exception e) {
                 log.error("❌ Failed to send OTP email to {}: {}", toEmail, e.getMessage());
-                log.error("Error details:", e);
+                log.error("Mailgun send error details:", e);
+                if (consoleFallback) {
+                    log.warn("Mailgun send failed, falling back to OTP log output because app.mail.console-fallback is enabled.");
+                    logOtpFallback(toEmail, code, label);
+                    return true;
+                }
             }
         } else {
             log.warn("Mail not configured. Mailgun domain: '{}', Fallback enabled: {}", 
@@ -94,7 +99,7 @@ public class EmailService {
         }
 
         if (consoleFallback) {
-            printOtpToConsole(toEmail, code, label);
+            logOtpFallback(toEmail, code, label);
             return true;
         }
 
@@ -139,14 +144,7 @@ public class EmailService {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private void printOtpToConsole(String toEmail, String code, String label) {
-        System.out.println();
-        System.out.println("============================================================");
-        System.out.println("  OTP CODE (" + label + ") — dev mode (SMTP not configured or send failed)");
-        System.out.println("  Email : " + toEmail);
-        System.out.println("  Code  : " + code);
-        System.out.println("  Copy the code above into the website form.");
-        System.out.println("============================================================");
-        System.out.println();
+    private void logOtpFallback(String toEmail, String code, String label) {
+        log.info("OTP CODE ({}) dev fallback — Email: {}, Code: {}", label, toEmail, code);
     }
 }
