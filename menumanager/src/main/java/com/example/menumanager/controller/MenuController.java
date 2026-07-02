@@ -153,6 +153,11 @@ public class MenuController {
     // lookup, payout bank) is wrapped in its own try/catch with a safe
     // default so a single broken row in `orders_items` or a missing
     // `branches` row can never 500 the page again.
+    //
+    // Expected query parameters:
+    // - branch: The branch ID (required for menu display)
+    // - table: The table number (required for order context)
+    // Example: /customer?branch=1&table=1
     @GetMapping("/customer")
     public String customerMenu(
             @RequestParam(required = false) Long branch,
