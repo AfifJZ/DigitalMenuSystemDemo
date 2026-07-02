@@ -1,0 +1,7 @@
+[build]
+  builder = "DOCKERFILE"
+  dockerfilePath = "menumanager/Dockerfile"
+  context = "menumanager"
+
+[deploy]
+  startCommand = ""
